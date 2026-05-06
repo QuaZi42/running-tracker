@@ -259,7 +259,7 @@ export default function RunningProgressTracker() {
         margin: "0 auto", // centers it
         width: "100%",
       }}
-    > 
+    >
       <h2>Summer Miles 2026</h2>
       <input
         placeholder="Name"
@@ -294,7 +294,16 @@ export default function RunningProgressTracker() {
         </p>
       )}
 
-      <div ref={mapContainer} style={{ height: "400px", marginTop: "20px" }} />
+      <div
+        ref={mapContainer}
+        style={{
+          height: "50vh",        // responsive height
+          minHeight: "400px",    // fallback
+          marginTop: "20px",
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      />
 
       <ul>
         {runs.map((r) => (
