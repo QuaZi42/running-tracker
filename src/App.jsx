@@ -252,7 +252,14 @@ export default function RunningProgressTracker() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div
+      style={{
+        padding: 20,
+        maxWidth: "900px",
+        margin: "0 auto", // centers it
+        width: "100%",
+      }}
+    > 
       <h2>Summer Miles 2026</h2>
       <input
         placeholder="Name"
