@@ -18,10 +18,16 @@ export default function RunningProgressTracker() {
   const [runs, setRuns] = useState([]);
   const [name, setName] = useState("");
   const [miles, setMiles] = useState("");
+
+  const [date, setDate] = useState(() => {
+    return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  });
+
   const [route, setRoute] = useState(null);
   const [routeDistance, setRouteDistance] = useState(null);
   const [mapError, setMapError] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+  
 
   const totalMiles = useMemo(
     () => runs.reduce((sum, r) => sum + r.miles, 0),
@@ -35,7 +41,7 @@ export default function RunningProgressTracker() {
     supabase
       .from("runs")
       .select("*")
-      .order("created_at", { ascending: true })
+      .order("date", { ascending: true })
       .then(({ data, error }) => {
         if (error) console.error("Failed to fetch runs:", error);
         else setRuns(data);
@@ -48,7 +54,11 @@ export default function RunningProgressTracker() {
         { event: "*", schema: "public", table: "runs" },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setRuns((prev) => [...prev, payload.new]);
+            setRuns((prev) =>
+              [...prev, payload.new].sort(
+                (a, b) => new Date(a.date) - new Date(b.date)
+              )
+            );
           } else if (payload.eventType === "DELETE") {
             setRuns((prev) => prev.filter((r) => r.id !== payload.old.id));
           }
@@ -215,11 +225,12 @@ export default function RunningProgressTracker() {
 
     const { data, error } = await supabase
       .from("runs")
-      .insert({ 
-        name: name.trim(), 
-        miles: parsedMiles 
+      .insert({
+        name: name.trim(),
+        miles: parsedMiles,
+        date: date, // ← new field
       })
-      .select();   // ← add .select() to get the inserted row back
+      .select();  // ← add .select() to get the inserted row back
 
     if (error) {
       console.error("Supabase insert error:", error);
@@ -228,6 +239,7 @@ export default function RunningProgressTracker() {
       console.log("Successfully inserted:", data);
       setName("");
       setMiles("");
+      setDate(new Date().toISOString().split("T")[0]);
       // Optional: you can manually add it too as backup
       // setRuns(prev => [...prev, data[0]]);
     }
@@ -253,6 +265,11 @@ export default function RunningProgressTracker() {
         value={miles}
         onChange={(e) => setMiles(e.target.value)}
       />
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+      />
       <button onClick={addRun} disabled={!routeDistance}>
         Add
       </button>
@@ -275,7 +292,7 @@ export default function RunningProgressTracker() {
       <ul>
         {runs.map((r) => (
           <li key={r.id} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span>{r.name}: {r.miles} mi</span>
+            <span>({r.date}): {r.name}: {r.miles} mi</span>
             {pendingDelete === r.id ? (
               <>
                 <button onClick={() => deleteRun(r.id)}>Confirm</button>
