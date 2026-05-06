@@ -90,16 +90,9 @@ export default function RunningProgressTracker() {
         setRoute(routeData.geometry.coordinates);
         setRouteDistance(routeData.distance / 1609.34);
 
-        map.addSource("route", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: routeData.geometry.coordinates,
-            },
-          },
-        });
+        map.addSource("progress", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }});
+
+        
 
         map.addLayer({
           id: "route",
@@ -108,8 +101,6 @@ export default function RunningProgressTracker() {
           paint: { "line-width": 5 },
         });
 
-        
-        map.addSource("progress", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }});
 
         map.addLayer({
           id: "progress-line",
@@ -120,6 +111,17 @@ export default function RunningProgressTracker() {
             "line-color": "#22c55e", // green
             "line-cap": "round"
           }
+        });
+
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: routeData.geometry.coordinates,
+            },
+          },
         });
 
         markerRef.current = new mapboxgl.Marker()
@@ -138,11 +140,13 @@ export default function RunningProgressTracker() {
   }, []);
 
   // marker position
+  // marker position AND progress line update
   useEffect(() => {
-    if (!route || !markerRef.current || !routeDistance) return;
+    if (!route || !markerRef.current || !routeDistance || !mapRef.current) return;
 
     const targetMiles = Math.min(totalMiles, routeDistance);
 
+    // ... (Keep your existing distance calculation logic) ...
     let cumulative = [0];
     for (let i = 1; i < route.length; i++) {
       const [lng1, lat1] = route[i - 1];
@@ -168,8 +172,27 @@ export default function RunningProgressTracker() {
     const lng = a[0] + (b[0] - a[0]) * t;
     const lat = a[1] + (b[1] - a[1]) * t;
 
-    markerRef.current.setLngLat([lng, lat]);
+    const currentPos = [lng, lat];
+
+    // 1. Move the marker (You already have this)
+    markerRef.current.setLngLat(currentPos);
+
+    // 2. UPDATE THE GREEN LINE (The missing part)
+    const progressSource = mapRef.current.getSource("progress");
+    if (progressSource) {
+      // We take the route up to the current segment, then add the exact interpolated point
+      const progressCoords = [...route.slice(0, i + 1), currentPos];
+      
+      progressSource.setData({
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: progressCoords,
+        },
+      });
+    }
   }, [totalMiles, route, routeDistance]);
+
 
   const addRun = async () => {
     const parsedMiles = parseFloat(miles);
