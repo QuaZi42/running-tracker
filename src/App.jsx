@@ -90,9 +90,18 @@ export default function RunningProgressTracker() {
         setRoute(routeData.geometry.coordinates);
         setRouteDistance(routeData.distance / 1609.34);
 
-        map.addSource("progress", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }});
+  
 
-        
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: routeData.geometry.coordinates,
+            },
+          },
+        });
 
         map.addLayer({
           id: "route",
@@ -101,6 +110,7 @@ export default function RunningProgressTracker() {
           paint: { "line-width": 5 },
         });
 
+        map.addSource("progress", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }});
 
         map.addLayer({
           id: "progress-line",
@@ -113,16 +123,8 @@ export default function RunningProgressTracker() {
           }
         });
 
-        map.addSource("route", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: routeData.geometry.coordinates,
-            },
-          },
-        });
+
+        
 
         markerRef.current = new mapboxgl.Marker()
           .setLngLat(START)
