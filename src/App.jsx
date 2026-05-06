@@ -253,7 +253,7 @@ export default function RunningProgressTracker() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Group Running Journey</h2>
+      <h2>Summer Miles 2026</h2>
       <input
         placeholder="Name"
         value={name}
