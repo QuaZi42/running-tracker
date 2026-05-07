@@ -11,6 +11,77 @@ const supabase = createClient(
 const START = [-71.35375025269208, 42.459403089874165];
 const END = [-121.91614025881732, 37.765293505678414];
 
+const RUNNERS = {
+  andrii: {
+    displayName: "Andrii",
+    image:
+      "https://static.vecteezy.com/system/resources/thumbnails/047/554/713/small/runner-woman-isolated-on-transparent-background-free-png.png",
+  },
+
+  ryan: {
+    displayName: "Ryan",
+    image:
+      "https://static.vecteezy.com/system/resources/thumbnails/047/554/713/small/runner-woman-isolated-on-transparent-background-free-png.png",
+  },
+  nathan: {
+    displayName: "Nathan",
+    image:
+      "https://i.postimg.cc/TYHb0qQ1/image.png",
+  },
+};
+
+const milestones = [
+  {
+    name: "Chicago",
+    miles: 962,
+    image:
+      "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
+  },
+
+  {
+    name: "Denver",
+    miles: 1800,
+    image:
+      "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1600&q=80",
+  },
+
+  {
+    name: "Salt Lake City",
+    miles: 2400,
+    image:
+      "https://images.unsplash.com/photo-1519874179391-3ebc752241dd?auto=format&fit=crop&w=1600&q=80",
+  },
+
+  {
+    name: "San Francisco",
+    miles: 3200,
+    image:
+      "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1600&q=80",
+  },
+];
+
+const imageCache = {};
+
+async function loadImage(url) {
+  if (imageCache[url]) return imageCache[url];
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+      imageCache[url] = img;
+      resolve(img);
+    };
+
+    img.onerror = reject;
+
+    img.src = url;
+  });
+}
+
+
 export default function RunningProgressTracker() {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
@@ -18,6 +89,12 @@ export default function RunningProgressTracker() {
   const [runs, setRuns] = useState([]);
   const [name, setName] = useState("");
   const [miles, setMiles] = useState("");
+  const [postcards, setPostcards] = useState([]);
+  const [generatedPostcards, setGeneratedPostcards] =
+  useState(new Set());
+
+  const [showLog, setShowLog] = useState(false);
+  const [showPostcards, setShowPostcards] = useState(false);
 
   const [date, setDate] = useState(() => {
     return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
@@ -186,10 +263,9 @@ export default function RunningProgressTracker() {
 
     const currentPos = [lng, lat];
 
-    // 1. Move the marker (You already have this)
     markerRef.current.setLngLat(currentPos);
 
-    // 2. UPDATE THE GREEN LINE (The missing part)
+    // UPDATE THE GREEN LINE 
     const progressSource = mapRef.current.getSource("progress");
     if (progressSource) {
       // We take the route up to the current segment, then add the exact interpolated point
@@ -205,6 +281,73 @@ export default function RunningProgressTracker() {
     }
   }, [totalMiles, route, routeDistance]);
 
+  useEffect(() => {
+    async function checkMilestones() {
+      const existing = new Set(generatedPostcards);
+
+      const newPostcards = [];
+      const newKeys = [];
+
+      let previousMiles = 0;
+      let currentMiles = 0;
+
+      for (const run of runs) {
+        currentMiles += run.miles;
+
+        for (const city of milestones) {
+          const crossedNow =
+            previousMiles < city.miles &&
+            currentMiles >= city.miles;
+
+          if (
+            crossedNow &&
+            !existing.has(city.name)
+          ) {
+            existing.add(city.name);
+
+            const postcard =
+              await generatePostcard(
+                city,
+                run.name
+              );
+
+            if (!postcard) continue;
+
+            newPostcards.push({
+              city: city.name,
+              runner: run.name,
+              image: postcard,
+              createdAt: Date.now(),
+            });
+
+            newKeys.push(city.name);
+          }
+        }
+
+        previousMiles = currentMiles;
+      }
+
+      if (newPostcards.length > 0) {
+        setPostcards((prev) =>
+          [...newPostcards, ...prev].sort(
+            (a, b) => b.createdAt - a.createdAt
+          )
+        );
+
+        setGeneratedPostcards((prev) => {
+          const next = new Set(prev);
+
+          for (const key of newKeys) {
+            next.add(key);
+          }
+
+          return next;
+        });
+      }
+    }
+
+    checkMilestones();
+  }, [runs]);
 
   const addRun = async () => {
     const parsedMiles = parseFloat(miles);
@@ -251,75 +394,319 @@ export default function RunningProgressTracker() {
     setPendingDelete(null);
   };
 
+  async function generatePostcard(city, runnerName) {
+    const runner = RUNNERS[runnerName.toLowerCase().trim()];
+
+    if (!runner) {
+      console.warn("No runner image found for:", runnerName);
+      return null;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+
+      canvas.width = 1400;
+      canvas.height = 800;
+
+      const ctx = canvas.getContext("2d");
+
+      const bg = await loadImage(city.image);
+      const runnerImg = await loadImage(runner.image);
+
+      // BACKGROUND
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+      // DARK OVERLAY
+      const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        canvas.height
+      );
+
+      gradient.addColorStop(0, "rgba(0,0,0,0.15)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.75)");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // POSTCARD BORDER
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 14;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      // CITY TITLE
+      ctx.fillStyle = "white";
+      ctx.font = "bold 74px sans-serif";
+
+      ctx.fillText(
+        city.name,
+        70,
+        110
+      );
+
+      // SUBTITLE
+      ctx.font = "36px sans-serif";
+
+      ctx.fillText(
+        `${runner.displayName} reached ${city.miles} miles`,
+        70,
+        170
+      );
+
+      // DATE
+      ctx.font = "28px sans-serif";
+
+      ctx.fillText(
+        new Date().toLocaleDateString(),
+        70,
+        220
+      );
+
+      // RUNNER IMAGE
+      const maxHeight = 520;
+
+      const aspect =
+        runnerImg.width / runnerImg.height;
+
+      const runnerHeight = maxHeight;
+      const runnerWidth =
+        runnerHeight * aspect;
+
+      ctx.drawImage(
+        runnerImg,
+        canvas.width - runnerWidth - 60,
+        canvas.height - runnerHeight - 30,
+        runnerWidth,
+        runnerHeight
+      );
+
+      // BOTTOM LABEL
+      ctx.font = "italic 30px serif";
+
+      ctx.fillText(
+        "Summer Miles 2026",
+        70,
+        canvas.height - 60
+      );
+
+      return canvas.toDataURL("image/png");
+    } catch (err) {
+      console.error("Failed to generate postcard:", err);
+      return null;
+    }
+  }
+
   return (
-    <div
-      style={{
-        padding: 20,
-        maxWidth: "900px",
-        margin: "0 auto", // centers it
-        width: "100%",
-      }}
-    >
-      <h2>Summer Miles 2026</h2>
-      <input
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        placeholder="Miles"
-        type="number"
-        value={miles}
-        onChange={(e) => setMiles(e.target.value)}
-      />
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
-      <button onClick={addRun} disabled={!routeDistance}>
-        Add
-      </button>
-
-      {routeDistance && (
-        <p>
-          {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles (
-          {(progress * 100).toFixed(0)}%)
-        </p>
-      )}
-
-      {mapError && (
-        <p style={{ color: "red" }}>
-          Map failed to load. Check your token and WebGL support.
-        </p>
-      )}
-
+    <div id="root">
       <div
-        ref={mapContainer}
         style={{
-          height: "50vh",        // responsive height
-          minHeight: "400px",    // fallback
-          marginTop: "20px",
-          borderRadius: "12px",
-          overflow: "hidden",
+          padding: 20,
+          maxWidth: "900px",
+          margin: "0 auto", // centers it
+          width: "100%",
         }}
-      />
+      >
+        <h2>Summer Miles 2026</h2>
+        <input
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          placeholder="Miles"
+          type="number"
+          value={miles}
+          onChange={(e) => setMiles(e.target.value)}
+        />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <button onClick={addRun} disabled={!routeDistance}>
+          Add
+        </button>
 
-      <ul>
-        {runs.map((r) => (
-          <li key={r.id} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span>({r.date}): {r.name}: {r.miles} mi</span>
-            {pendingDelete === r.id ? (
-              <>
-                <button onClick={() => deleteRun(r.id)}>Confirm</button>
-                <button onClick={() => setPendingDelete(null)}>Cancel</button>
-              </>
-            ) : (
-              <button onClick={() => setPendingDelete(r.id)}>Remove</button>
+        {routeDistance && (
+          <p>
+            {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles (
+            {(progress * 100).toFixed(0)}%)
+          </p>
+        )}
+
+        {mapError && (
+          <p style={{ color: "red" }}>
+            Map failed to load. Check your token and WebGL support.
+          </p>
+        )}
+
+        <div
+          ref={mapContainer}
+          style={{
+            height: "50vh",        // responsive height
+            minHeight: "400px",    // fallback
+            marginTop: "20px",
+            borderRadius: "12px",
+            overflow: "hidden",
+          }}
+        />
+        <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 30 }}>
+            <button
+              onClick={() => setShowLog(!showLog)}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "10px",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+                marginBottom: "12px",
+              }}
+            >
+              {showLog ? "▼" : "▶"} Run Log
+            </button>
+
+            {showLog && (
+              <ul
+                style={{
+                  paddingLeft: "20px",
+                }}
+              >
+                {runs.map((r) => (
+                  <li
+                    key={r.id}
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <span>
+                      ({r.date}): {r.name}: {r.miles} mi
+                    </span>
+
+                    {pendingDelete === r.id ? (
+                      <>
+                        <button
+                          onClick={() => deleteRun(r.id)}
+                        >
+                          Confirm
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            setPendingDelete(null)
+                          }
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          setPendingDelete(r.id)
+                        }
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
-          </li>
-        ))}
-      </ul>
+          </div>
+          <div style={{ marginTop: 3 }}>
+            {postcards.length > 0 && (
+              <button
+                onClick={() =>
+                  setShowPostcards(!showPostcards)
+                }
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  marginBottom: "12px",
+                }}
+              >
+                {showPostcards ? "▼" : "▶"} Postcards
+              </button>
+            )}
+
+            {showPostcards && (
+              <div>
+                {postcards.length === 0 && (
+                  <p>No cities reached yet.</p>
+                )}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: "20px",
+                  }}
+                >
+                  {postcards.map((p, index) => (
+                    <div
+                      key={`${p.city}-${index}`}
+                      style={{
+                        background: "#111",
+                        padding: "12px",
+                        borderRadius: "16px",
+                      }}
+                    >
+                      <img
+                        src={p.image}
+                        alt={p.city}
+                        style={{
+                          width: "100%",
+                          borderRadius: "12px",
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems: "center",
+                          marginTop: "10px",
+                        }}
+                      >
+                        <div>
+                          <strong>{p.city}</strong>
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              opacity: 0.7,
+                            }}
+                          >
+                            {p.runner}
+                          </div>
+                        </div>
+
+                        <a
+                          href={p.image}
+                          download={`${p.city}-postcard.png`}
+                          style={{
+                            color: "#22c55e",
+                          }}
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
