@@ -97,7 +97,10 @@ export default function RunningProgressTracker() {
   const [showPostcards, setShowPostcards] = useState(false);
 
   const [date, setDate] = useState(() => {
-    return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    return local.toISOString().split("T")[0];
   });
 
   const [route, setRoute] = useState(null);
@@ -382,7 +385,10 @@ export default function RunningProgressTracker() {
       console.log("Successfully inserted:", data);
       setName("");
       setMiles("");
-      setDate(new Date().toISOString().split("T")[0]);
+      const d = new Date();
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      setDate(local.toISOString().split("T")[0]);
       // Optional: you can manually add it too as backup
       // setRuns(prev => [...prev, data[0]]);
     }
