@@ -33,16 +33,16 @@ const RUNNERS = {
 const milestones = [
   {
     name: "Chicago",
-    miles: 962,
+    miles: 961.8,
     image:
       "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
   },
 
   {
-    name: "Denver",
-    miles: 1800,
+    name: "Cleveland",
+    miles: 628.1,
     image:
-      "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=1600&q=80",
+      "https://img1.10bestmedia.com/Images/Photos/372221/Cleveland-Letters-at-Edgewater-Park-Normal-Edit-2_54_990x660.jpg?auto=webp&width=3840&quality=75",
   },
 
   {
