@@ -28,7 +28,15 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/TYHb0qQ1/image.png",
   },
+  benjamin: {
+    displayName: "Benjamin",
+    image:
+      "https://i.postimg.cc/R0pNRMvp/image.png",
+  },
 };
+
+
+  
 
 const milestones = [
   {
