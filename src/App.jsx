@@ -32,28 +32,42 @@ const RUNNERS = {
 
 const milestones = [
   {
-    name: "Chicago",
+    name: "Chicago, IL",
     miles: 961.8,
     image:
       "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
   },
 
   {
-    name: "Cleveland",
+    name: "Cleveland, OH",
     miles: 628.1,
     image:
       "https://img1.10bestmedia.com/Images/Photos/372221/Cleveland-Letters-at-Edgewater-Park-Normal-Edit-2_54_990x660.jpg?auto=webp&width=3840&quality=75",
   },
 
   {
-    name: "Salt Lake City",
+    name: "Albany, NY",
+    miles: 165.9,
+    image:
+      "https://i.postimg.cc/CKm212S3/image.png",
+  },
+
+  {
+    name: "Syracuse, NY",
+    miles: 305.0,
+    image:
+      "https://www.syracuse.edu/images/yf81g4_AEW-FcB6qaBQXLcSAFug=/5960/width-1300/SFS-Fall-Campus-Scenes-Roofs.jpg",
+  },
+
+  {
+    name: "Salt Lake City, UT",
     miles: 2400,
     image:
       "https://images.unsplash.com/photo-1519874179391-3ebc752241dd?auto=format&fit=crop&w=1600&q=80",
   },
 
   {
-    name: "San Francisco",
+    name: "San Francisco, CA",
     miles: 3200,
     image:
       "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1600&q=80",
@@ -108,6 +122,7 @@ export default function RunningProgressTracker() {
   const [mapError, setMapError] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   
+  const generatingRef = useRef(new Set());
 
   const totalMiles = useMemo(
     () => runs.reduce((sum, r) => sum + r.miles, 0),
@@ -302,11 +317,12 @@ export default function RunningProgressTracker() {
             previousMiles < city.miles &&
             currentMiles >= city.miles;
 
-          if (
-            crossedNow &&
-            !existing.has(city.name)
-          ) {
-            existing.add(city.name);
+         if (
+          crossedNow &&
+          !existing.has(city.name) &&
+          !generatingRef.current.has(city.name)
+        ) {
+          generatingRef.current.add(city.name);
 
             const postcard =
               await generatePostcard(
@@ -314,10 +330,15 @@ export default function RunningProgressTracker() {
                 run.name
               );
 
-            if (!postcard) continue;
+            if (!postcard) {
+              generatingRef.current.delete(city.name);
+              continue;
+            }
+            generatingRef.current.delete(city.name);
 
             newPostcards.push({
               city: city.name,
+              miles: city.miles,
               runner: run.name,
               image: postcard,
               createdAt: Date.now(),
@@ -333,7 +354,7 @@ export default function RunningProgressTracker() {
       if (newPostcards.length > 0) {
         setPostcards((prev) =>
           [...newPostcards, ...prev].sort(
-            (a, b) => b.createdAt - a.createdAt
+            (a, b) =>  b.miles - a.miles
           )
         );
 
