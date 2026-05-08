@@ -133,10 +133,10 @@ const milestones = [
   },
 
   {
-    name: "San Francisco, CA",
-    miles: 3200,
+    name: "Ryan Zhao Memorial, CA",
+    miles: 3095.47,
     image:
-      "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1600&q=80",
+      "https://i.postimg.cc/MTYDhVLq/image.png",
   },
 ];
 
