@@ -41,7 +41,7 @@ const RUNNERS = {
   ben_h: {
     displayName: "Ben_H",
     image:
-      "https://i.postimg.cc/PJK1f63G/image.png",
+      "https://i.postimg.cc/XqgZYvgL/image.png",
   },
   sebastian: {
     displayName: "Sebastian",
