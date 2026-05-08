@@ -15,7 +15,7 @@ const RUNNERS = {
   andrii: {
     displayName: "Andrii",
     image:
-      "https://static.vecteezy.com/system/resources/thumbnails/047/554/713/small/runner-woman-isolated-on-transparent-background-free-png.png",
+      "https://i.postimg.cc/xj52fH2p/image.png",
   },
 
   ryan: {
@@ -481,18 +481,28 @@ export default function RunningProgressTracker() {
       // BACKGROUND
       ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-      // DARK OVERLAY
-      const gradient = ctx.createLinearGradient(
-        0,
-        0,
-        0,
-        canvas.height
+      // WARM POSTCARD TONE
+      ctx.fillStyle = "rgba(255, 210, 160, 0.18)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // SLIGHT FADE
+      ctx.fillStyle = "rgba(120, 90, 60, 0.10)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // SOFT VIGNETTE
+      const vignette = ctx.createRadialGradient(
+        canvas.width / 2,
+        canvas.height / 2,
+        250,
+        canvas.width / 2,
+        canvas.height / 2,
+        900
       );
 
-      gradient.addColorStop(0, "rgba(0,0,0,0.15)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.75)");
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.28)");
 
-      ctx.fillStyle = gradient;
+      ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // POSTCARD BORDER
