@@ -105,6 +105,13 @@ const milestones = [
   },
 
   {
+    name: "Cheyenne, WY",
+    miles: 1920.4,
+    image:
+      "https://i.postimg.cc/hvKR8Lky/image.png",
+  },
+
+  {
     name: "Salt Lake City, UT",
     miles: 2400,
     image:
