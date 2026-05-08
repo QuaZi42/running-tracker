@@ -33,6 +33,21 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/R0pNRMvp/image.png",
   },
+  jimmy: {
+    displayName: "Jimmy",
+    image:
+      "https://i.postimg.cc/Y0tS9MZr/image.png",
+  },
+  ben_h: {
+    displayName: "Ben_H",
+    image:
+      "https://i.postimg.cc/PJK1f63G/image.png",
+  },
+  sebastian: {
+    displayName: "Sebastian",
+    image:
+      "https://i.postimg.cc/vZST8RGg/image.png",
+  },
 };
 
 
@@ -64,9 +79,24 @@ const milestones = [
     name: "Syracuse, NY",
     miles: 305.0,
     image:
-      "https://www.syracuse.edu/images/yf81g4_AEW-FcB6qaBQXLcSAFug=/5960/width-1300/SFS-Fall-Campus-Scenes-Roofs.jpg",
+      "https://i.postimg.cc/FRzYg9G2/image.png",
   },
 
+  {
+    name: "Buffalo, NY",
+    miles: 450.0,
+    image:
+      "https://i.postimg.cc/bvzDr0tV/image.png",
+  },
+
+  {
+    name: "Des Moines, IA",
+    miles: 1295.2,
+    image:
+      "https://i.postimg.cc/gcCkTyNL/image.png",
+      // "https://i.postimg.cc/cHWr2RsB/image.png",
+  },
+  
   {
     name: "Salt Lake City, UT",
     miles: 2400,
