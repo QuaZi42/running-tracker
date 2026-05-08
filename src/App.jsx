@@ -15,13 +15,13 @@ const RUNNERS = {
   andrii: {
     displayName: "Andrii",
     image:
-      "https://i.postimg.cc/xj52fH2p/image.png",
+      "https://i.postimg.cc/NfjGXt7H/image.png",
   },
 
   ryan: {
     displayName: "Ryan",
     image:
-      "https://static.vecteezy.com/system/resources/thumbnails/047/554/713/small/runner-woman-isolated-on-transparent-background-free-png.png",
+      "https://i.postimg.cc/QNSnFZdP/image.png",
   },
   nathan: {
     displayName: "Nathan",
@@ -46,7 +46,7 @@ const RUNNERS = {
   sebastian: {
     displayName: "Sebastian",
     image:
-      "https://i.postimg.cc/vZST8RGg/image.png",
+      "https://i.postimg.cc/RZnB1Z3z/image.png",
   },
 };
 
@@ -54,20 +54,6 @@ const RUNNERS = {
   
 
 const milestones = [
-  {
-    name: "Chicago, IL",
-    miles: 961.8,
-    image:
-      "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
-  },
-
-  {
-    name: "Cleveland, OH",
-    miles: 628.1,
-    image:
-      "https://img1.10bestmedia.com/Images/Photos/372221/Cleveland-Letters-at-Edgewater-Park-Normal-Edit-2_54_990x660.jpg?auto=webp&width=3840&quality=75",
-  },
-
   {
     name: "Albany, NY",
     miles: 165.9,
@@ -90,6 +76,20 @@ const milestones = [
   },
 
   {
+    name: "Cleveland, OH",
+    miles: 628.1,
+    image:
+      "https://i.postimg.cc/KjNnHbRN/image.png",
+  },
+  
+  {
+    name: "Chicago, IL",
+    miles: 961.8,
+    image:
+      "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
+  },
+
+  {
     name: "Des Moines, IA",
     miles: 1295.2,
     image:
@@ -99,9 +99,16 @@ const milestones = [
   
   {
     name: "Omaha, NE",
-    miles: 1430.89,
+    miles: 1430.9,
     image:
       "https://i.postimg.cc/zGxm51Yr/image.png",
+  },
+
+  {
+    name: "Lexington, NE",
+    miles: 1648.25,
+    image:
+      "https://i.postimg.cc/jd5dGT11/image.png",
   },
 
   {
@@ -109,13 +116,20 @@ const milestones = [
     miles: 1920.4,
     image:
       "https://i.postimg.cc/hvKR8Lky/image.png",
-  },
+  },  
+
+  {
+    name: "Green River, WY",
+    miles: 2195.1,
+    image:
+      "https://i.postimg.cc/c1MMHRTj/image.png",
+  }, 
 
   {
     name: "Salt Lake City, UT",
-    miles: 2400,
+    miles: 2355.9,
     image:
-      "https://images.unsplash.com/photo-1519874179391-3ebc752241dd?auto=format&fit=crop&w=1600&q=80",
+      "https://i.postimg.cc/L8jW6YY4/image.png",
   },
 
   {
@@ -564,8 +578,8 @@ export default function RunningProgressTracker() {
 
       ctx.drawImage(
         runnerImg,
-        canvas.width - runnerWidth - 60,
-        canvas.height - runnerHeight - 30,
+        canvas.width - runnerWidth - 60 + 33,
+        canvas.height - runnerHeight - 30 + 3,
         runnerWidth,
         runnerHeight
       );
