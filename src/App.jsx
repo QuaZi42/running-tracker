@@ -98,6 +98,13 @@ const milestones = [
   },
   
   {
+    name: "Omaha, NE",
+    miles: 1430.89,
+    image:
+      "https://i.postimg.cc/zGxm51Yr/image.png",
+  },
+
+  {
     name: "Salt Lake City, UT",
     miles: 2400,
     image:
