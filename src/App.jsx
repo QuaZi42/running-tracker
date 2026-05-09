@@ -8,7 +8,7 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-const START = [-71.35375025269208, 42.459403089874165];
+const START = [-71.35375025269208, 42.459403089874165]; 
 const END = [-121.91614025881732, 37.765293505678414];
 
 const RUNNERS = {
@@ -381,7 +381,7 @@ export default function RunningProgressTracker() {
 
   useEffect(() => {
     async function checkMilestones() {
-      const existing = new Set(generatedPostcards);
+      const existing = generatedPostcards;
 
       const newPostcards = [];
       const newKeys = [];
@@ -615,35 +615,34 @@ export default function RunningProgressTracker() {
   }
 
   return (
-    <div id="root">
-      <div
-        style={{
-          padding: 20,
-          maxWidth: "900px",
-          margin: "0 auto", // centers it
-          width: "100%",
-        }}
-      >
-        <h2>Summer Miles 2026</h2>
-        <input
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          placeholder="Miles"
-          type="number"
-          value={miles}
-          onChange={(e) => setMiles(e.target.value)}
-        />
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-        <button onClick={addRun} disabled={!routeDistance}>
-          Add
-        </button>
+    <div className="app-container">
+        <h2 className="title">
+          Summer Miles 2026
+        </h2>
+
+        <div className="controls">
+
+          <input
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            placeholder="Miles"
+            type="number"
+            value={miles}
+            onChange={(e) => setMiles(e.target.value)}
+          />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          <button onClick={addRun} disabled={!routeDistance}>
+            Add
+          </button>
+
+        </div>
 
         {routeDistance && (
           <p>
@@ -653,73 +652,45 @@ export default function RunningProgressTracker() {
         )}
 
         {mapError && (
-          <p style={{ color: "red" }}>
+          <p className="error-text">
             Map failed to load. Check your token and WebGL support.
           </p>
         )}
 
         <div
           ref={mapContainer}
-          style={{
-            height: "50vh",        // responsive height
-            minHeight: "400px",    // fallback
-            marginTop: "20px",
-            borderRadius: "12px",
-            overflow: "hidden",
-          }}
+          className="map-container"
         />
-        <div style={{ marginTop: 20 }}>
-          <div style={{ marginTop: 30 }}>
+        <div className="section">
+          <div className="section-lg">
             <button
               onClick={() => setShowLog(!showLog)}
-              style={{
-                padding: "10px 16px",
-                borderRadius: "10px",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "bold",
-                marginBottom: "12px",
-              }}
+              className="toggle-btn"
             >
               {showLog ? "▼" : "▶"} Run Log
             </button>
 
             {showLog && (
-              <ul
-                style={{
-                  paddingLeft: "20px",
-                }}
-              >
+              <ul className="run-log">
                 {runs.map((r) => (
-                  <li
-                    key={r.id}
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                      marginBottom: "10px",
-                    }}
-                  >
+                  <li key={r.id} className="run-item">
                     <span>
                       ({r.date}): {r.name}: {r.miles} mi
                     </span>
 
                     {pendingDelete === r.id ? (
-                      <>
-                        <button
-                          onClick={() => deleteRun(r.id)}
-                        >
+                      <div className="delete-actions">
+                        <button onClick={() => deleteRun(r.id)}>
                           Confirm
                         </button>
 
                         <button
-                          onClick={() =>
-                            setPendingDelete(null)
-                          }
+                          className="secondary-btn"
+                          onClick={() => setPendingDelete(null)}
                         >
                           Cancel
                         </button>
-                      </>
+                      </div>
                     ) : (
                       <button
                         onClick={() =>
@@ -740,14 +711,7 @@ export default function RunningProgressTracker() {
                 onClick={() =>
                   setShowPostcards(!showPostcards)
                 }
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "10px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  marginBottom: "12px",
-                }}
+                className="toggle-btn"
               >
                 {showPostcards ? "▼" : "▶"} Postcards
               </button>
@@ -759,49 +723,22 @@ export default function RunningProgressTracker() {
                   <p>No cities reached yet.</p>
                 )}
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "20px",
-                  }}
-                >
+                <div className="postcard-grid">
                   {postcards.map((p, index) => (
                     <div
                       key={`${p.city}-${index}`}
-                      style={{
-                        background: "#111",
-                        padding: "12px",
-                        borderRadius: "16px",
-                      }}
+                      className="postcard-card"
                     >
                       <img
                         src={p.image}
                         alt={p.city}
-                        style={{
-                          width: "100%",
-                          borderRadius: "12px",
-                        }}
+                        className="postcard-image"
                       />
 
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent:
-                            "space-between",
-                          alignItems: "center",
-                          marginTop: "10px",
-                        }}
-                      >
+                      <div className="postcard-footer">
                         <div>
                           <strong>{p.city}</strong>
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              opacity: 0.7,
-                            }}
-                          >
+                          <div className="runner-name">
                             {p.runner}
                           </div>
                         </div>
@@ -809,9 +746,7 @@ export default function RunningProgressTracker() {
                         <a
                           href={p.image}
                           download={`${p.city}-postcard.png`}
-                          style={{
-                            color: "#22c55e",
-                          }}
+                          className="download-link"
                         >
                           Download
                         </a>
@@ -824,6 +759,5 @@ export default function RunningProgressTracker() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

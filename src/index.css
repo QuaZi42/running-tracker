@@ -3,13 +3,16 @@
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+html{
   margin: 0;
   padding: 0;
   min-height: 100%;
   width: 100%;
+}
+
+input,
+button {
+  min-height: 44px;
 }
 
 /* THEME */
@@ -33,6 +36,13 @@ body,
 }
 
 body {
+  margin: 0;
+  min-height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
   background: var(--bg);
   color: var(--text);
 
@@ -172,4 +182,138 @@ a:hover {
     flex-direction: column;
     gap: 10px;
   }
+}
+
+.app-container {
+  width: 100%;
+  max-width: 950px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.postcard-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow: var(--shadow);
+}
+
+.postcard-card {
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.postcard-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.postcard-image {
+  width: 100%;
+  display: block;
+
+  border-radius: 12px;
+}
+
+.postcard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px;
+}
+
+.run-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: var(--panel);
+
+  border-radius: 12px;
+
+  padding: 12px 14px;
+
+  margin-bottom: 10px;
+}
+
+.runner-name {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.map-container {
+  height: 50vh;
+  min-height: 400px;
+
+  margin-top: 20px;
+
+  border-radius: 16px;
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+
+  box-shadow: var(--shadow);
+}
+
+.section {
+  margin-top: 20px;
+}
+
+.section-lg {
+  margin-top: 30px;
+}
+
+.title {
+  margin-bottom: 18px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  margin-bottom: 18px;
+}
+
+.controls input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.postcard-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(320px, 1fr));
+
+  gap: 20px;
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.toggle-btn {
+  margin-bottom: 12px;
+}
+
+.download-link {
+  color: var(--accent);
+}
+
+.delete-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.delete-actions button,
+.run-item > button {
+  min-width: 90px;
 }
