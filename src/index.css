@@ -317,3 +317,8 @@ a:hover {
 .run-item > button {
   min-width: 90px;
 }
+
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}

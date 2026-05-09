@@ -147,6 +147,13 @@ const milestones = [
   },
 
   {
+    name: "Sacramento, CA",
+    miles: 3002.4,
+    image:
+      "https://i.postimg.cc/7P0zsQ97/image.png",
+  },
+
+  {
     name: "Ryan Zhao Memorial, CA",
     miles: 3095.47,
     image:
@@ -197,6 +204,12 @@ export default function RunningProgressTracker() {
     return local.toISOString().split("T")[0];
   });
 
+  const [time, setTime] = useState(() => {
+    const d = new Date();
+
+    return d.toTimeString().slice(0, 5); // HH:MM
+  });
+
   const [route, setRoute] = useState(null);
   const [routeDistance, setRouteDistance] = useState(null);
   const [mapError, setMapError] = useState(false);
@@ -216,7 +229,8 @@ export default function RunningProgressTracker() {
     supabase
       .from("runs")
       .select("*")
-      .order("date", { ascending: true })
+      .order("date", { ascending: false })
+      .order("time", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("Failed to fetch runs:", error);
         else setRuns(data);
@@ -231,7 +245,7 @@ export default function RunningProgressTracker() {
           if (payload.eventType === "INSERT") {
             setRuns((prev) =>
               [...prev, payload.new].sort(
-                (a, b) => new Date(a.date) - new Date(b.date)
+                new Date(`${b.date}T${b.time || "00:00:00"}`) - new Date(`${a.date}T${a.time || "00:00:00"}`)
               )
             );
           } else if (payload.eventType === "DELETE") {
@@ -476,6 +490,7 @@ export default function RunningProgressTracker() {
         name: name.trim(),
         miles: parsedMiles,
         date: date, // ← new field
+        time: `${time}:00`,
       })
       .select();  // ← add .select() to get the inserted row back
 
@@ -638,6 +653,11 @@ export default function RunningProgressTracker() {
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
           <button onClick={addRun} disabled={!routeDistance}>
             Add
           </button>
@@ -675,7 +695,7 @@ export default function RunningProgressTracker() {
                 {runs.map((r) => (
                   <li key={r.id} className="run-item">
                     <span>
-                      ({r.date}): {r.name}: {r.miles} mi
+                      ({r.date} {r.time?.slice(0, 5)}): {r.name}: {r.miles} mi
                     </span>
 
                     {pendingDelete === r.id ? (
