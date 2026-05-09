@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@supabase/supabase-js";
+import WeeklyRecapsPage from "./WeeklyRecapsPage";
+
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -184,15 +186,17 @@ async function loadImage(url) {
 
 
 export default function RunningProgressTracker() {
+  const [page, setPage] = useState("tracker");
+
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  
   const [runs, setRuns] = useState([]);
   const [name, setName] = useState("");
   const [miles, setMiles] = useState("");
   const [postcards, setPostcards] = useState([]);
-  const [generatedPostcards, setGeneratedPostcards] =
-  useState(new Set());
+  const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
 
   const [showLog, setShowLog] = useState(false);
   const [showPostcards, setShowPostcards] = useState(false);
@@ -204,11 +208,7 @@ export default function RunningProgressTracker() {
     return local.toISOString().split("T")[0];
   });
 
-  const [time, setTime] = useState(() => {
-    const d = new Date();
-
-    return d.toTimeString().slice(0, 5); // HH:MM
-  });
+  const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
 
   const [route, setRoute] = useState(null);
   const [routeDistance, setRouteDistance] = useState(null);
@@ -217,23 +217,19 @@ export default function RunningProgressTracker() {
   
   const generatingRef = useRef(new Set());
 
-  const totalMiles = useMemo(
-    () => runs.reduce((sum, r) => sum + r.miles, 0),
-    [runs]
-  );
-
+  const totalMiles = useMemo(() => runs.reduce((sum, r) => sum + r.miles, 0), [runs]);
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
 
-  // fetch existing runs + subscribe to real-time changes
+  // Fetch runs + real-time subscription
   useEffect(() => {
     supabase
       .from("runs")
       .select("*")
-      .order("date", { ascending: false })
-      .order("time", { ascending: false })
+      .order("date", { ascending: true })
+      .order("time", { ascending: true })
       .then(({ data, error }) => {
         if (error) console.error("Failed to fetch runs:", error);
-        else setRuns(data);
+        else setRuns(data || []);
       });
 
     const channel = supabase
@@ -245,9 +241,9 @@ export default function RunningProgressTracker() {
           if (payload.eventType === "INSERT") {
             setRuns((prev) =>
               [...prev, payload.new].sort(
-              (a, b) =>
-                new Date(`${b.date}T${b.time || "00:00:00"}`) -
-                new Date(`${a.date}T${a.time || "00:00:00"}`)
+                (a, b) =>
+                  new Date(`${b.date}T${b.time || "00:00:00"}`) -
+                  new Date(`${a.date}T${a.time || "00:00:00"}`)
               )
             );
           } else if (payload.eventType === "DELETE") {
@@ -260,9 +256,16 @@ export default function RunningProgressTracker() {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  // map setup
+  // Map setup
   useEffect(() => {
-    if (mapRef.current) return;
+    // Cleanup previous map
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    }
+
+    if (page !== "tracker") return;
 
     if (!mapboxgl.supported()) {
       setMapError(true);
@@ -291,16 +294,11 @@ export default function RunningProgressTracker() {
         setRoute(routeData.geometry.coordinates);
         setRouteDistance(routeData.distance / 1609.34);
 
-  
-
         map.addSource("route", {
           type: "geojson",
           data: {
             type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: routeData.geometry.coordinates,
-            },
+            geometry: { type: "LineString", coordinates: routeData.geometry.coordinates },
           },
         });
 
@@ -311,7 +309,10 @@ export default function RunningProgressTracker() {
           paint: { "line-width": 5 },
         });
 
-        map.addSource("progress", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } }});
+        map.addSource("progress", {
+          type: "geojson",
+          data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
+        });
 
         map.addLayer({
           id: "progress-line",
@@ -319,17 +320,12 @@ export default function RunningProgressTracker() {
           source: "progress",
           paint: {
             "line-width": 6,
-            "line-color": "#22c55e", // green
-            "line-cap": "round"
-          }
+            "line-color": "#22c55e",
+            "line-cap": "round",
+          },
         });
 
-
-        
-
-        markerRef.current = new mapboxgl.Marker()
-          .setLngLat(START)
-          .addTo(map);
+        markerRef.current = new mapboxgl.Marker().setLngLat(START).addTo(map);
       } catch (e) {
         console.error("Failed to load route:", e);
         setMapError(true);
@@ -339,18 +335,17 @@ export default function RunningProgressTracker() {
     return () => {
       mapRef.current?.remove();
       mapRef.current = null;
+      markerRef.current = null;
     };
-  }, []);
+  }, [page]);
 
-  // marker position
-  // marker position AND progress line update
+  // Update marker + progress line
   useEffect(() => {
     if (!route || !markerRef.current || !routeDistance || !mapRef.current) return;
 
     const targetMiles = Math.min(totalMiles, routeDistance);
-
-    // ... (Keep your existing distance calculation logic) ...
     let cumulative = [0];
+
     for (let i = 1; i < route.length; i++) {
       const [lng1, lat1] = route[i - 1];
       const [lng2, lat2] = route[i];
@@ -379,94 +374,75 @@ export default function RunningProgressTracker() {
 
     markerRef.current.setLngLat(currentPos);
 
-    // UPDATE THE GREEN LINE 
     const progressSource = mapRef.current.getSource("progress");
     if (progressSource) {
-      // We take the route up to the current segment, then add the exact interpolated point
       const progressCoords = [...route.slice(0, i + 1), currentPos];
-      
       progressSource.setData({
         type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: progressCoords,
-        },
+        geometry: { type: "LineString", coordinates: progressCoords },
       });
     }
   }, [totalMiles, route, routeDistance]);
 
-  useEffect(() => {
-    async function checkMilestones() {
-      const existing = generatedPostcards;
+  // Milestone postcards
+// Keep this ref at the top level of your component
+const processedMilestonesRef = useRef(new Set());
 
-      const newPostcards = [];
-      const newKeys = [];
+useEffect(() => {
+  async function checkMilestones() {
+    const newPostcards = [];
+    let currentTotal = 0;
 
-      let previousMiles = 0;
-      let currentMiles = 0;
+    // Use a local set for this specific execution to prevent internal duplicates
+    const batchSeen = new Set();
 
-      for (const run of runs) {
-        currentMiles += run.miles;
+    for (const run of runs) {
+      currentTotal += run.miles;
 
-        for (const city of milestones) {
-          const crossedNow =
-            previousMiles < city.miles &&
-            currentMiles >= city.miles;
+      for (const city of milestones) {
+        const crossed = currentTotal >= city.miles;
+        
+        // Check BOTH the global ref and the local batch set
+        if (crossed && !processedMilestonesRef.current.has(city.name) && !batchSeen.has(city.name)) {
+          
+          // LOCK it immediately before starting the async canvas work
+          batchSeen.add(city.name);
+          processedMilestonesRef.current.add(city.name);
 
-         if (
-          crossedNow &&
-          !existing.has(city.name) &&
-          !generatingRef.current.has(city.name)
-        ) {
-          generatingRef.current.add(city.name);
-
-            const postcard =
-              await generatePostcard(
-                city,
-                run.name
-              );
-
-            if (!postcard) {
-              generatingRef.current.delete(city.name);
-              continue;
-            }
-            generatingRef.current.delete(city.name);
-
+          const postcardImg = await generatePostcard(city, run.name);
+          
+          if (postcardImg) {
             newPostcards.push({
               city: city.name,
               miles: city.miles,
               runner: run.name,
-              image: postcard,
+              image: postcardImg,
               createdAt: Date.now(),
             });
-
-            newKeys.push(city.name);
           }
         }
-
-        previousMiles = currentMiles;
-      }
-
-      if (newPostcards.length > 0) {
-        setPostcards((prev) =>
-          [...newPostcards, ...prev].sort(
-            (a, b) =>  b.miles - a.miles
-          )
-        );
-
-        setGeneratedPostcards((prev) => {
-          const next = new Set(prev);
-
-          for (const key of newKeys) {
-            next.add(key);
-          }
-
-          return next;
-        });
       }
     }
 
-    checkMilestones();
+    if (newPostcards.length > 0) {
+      setPostcards((prev) => {
+        // Create a map of existing postcards indexed by city name
+        const combined = [...newPostcards, ...prev];
+        const uniqueMap = new Map();
+        
+        // Only keep the first instance of any city found
+        combined.forEach(p => {
+          if (!uniqueMap.has(p.city)) {
+            uniqueMap.set(p.city, p);
+          }
+        });
+
+        return Array.from(uniqueMap.values()).sort((a, b) => b.miles - a.miles);
+      });
+    }
+  }
+
+  checkMilestones();
   }, [runs]);
 
   const addRun = async () => {
@@ -513,10 +489,18 @@ export default function RunningProgressTracker() {
   };
 
   const deleteRun = async (id) => {
-    const { error } = await supabase.from("runs").delete().eq("id", id);
-    if (error) console.error("Failed to delete run:", error);
+  const { error } = await supabase.from("runs").delete().eq("id", id);
+  
+  if (!error) {
+    // 1. Clear the "already processed" memory
+    processedMilestonesRef.current.clear();
+    // 2. Wipe the postcards so they are re-generated based on remaining runs
+    setPostcards([]);
     setPendingDelete(null);
-  };
+  } else {
+    console.error("Failed to delete run:", error);
+  }
+};
 
   async function generatePostcard(city, runnerName) {
     const runner = RUNNERS[runnerName.toLowerCase().trim()];
@@ -630,156 +614,107 @@ export default function RunningProgressTracker() {
       return null;
     }
   }
+  
+  useEffect(() => {
+    if (page === "tracker" && mapRef.current === null) {
+      // Small delay to let DOM settle
+      const timer = setTimeout(() => {
+        // Force re-init if needed (you can also just rely on the existing effect)
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [page]);
 
-  return (
+  
+ return (
     <div className="app-container">
-        <h2 className="title">
-          Summer Miles 2026
-        </h2>
-
-        <div className="controls">
-
-          <input
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            placeholder="Miles"
-            type="number"
-            value={miles}
-            onChange={(e) => setMiles(e.target.value)}
-          />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
-          <button onClick={addRun} disabled={!routeDistance}>
-            Add
-          </button>
-
-        </div>
-
-        {routeDistance && (
-          <p>
-            {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles (
-            {(progress * 100).toFixed(0)}%)
-          </p>
-        )}
-
-        {mapError && (
-          <p className="error-text">
-            Map failed to load. Check your token and WebGL support.
-          </p>
-        )}
-
-        <div
-          ref={mapContainer}
-          className="map-container"
-        />
-        <div className="section">
-          <div className="section-lg">
-            <button
-              onClick={() => setShowLog(!showLog)}
-              className="toggle-btn"
-            >
-              {showLog ? "▼" : "▶"} Run Log
-            </button>
-
-            {showLog && (
-              <ul className="run-log">
-                {runs.map((r) => (
-                  <li key={r.id} className="run-item">
-                    <span>
-                      ({r.date} {r.time?.slice(0, 5)}): {r.name}: {r.miles} mi
-                    </span>
-
-                    {pendingDelete === r.id ? (
-                      <div className="delete-actions">
-                        <button onClick={() => deleteRun(r.id)}>
-                          Confirm
-                        </button>
-
-                        <button
-                          className="secondary-btn"
-                          onClick={() => setPendingDelete(null)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() =>
-                          setPendingDelete(r.id)
-                        }
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+      {page === "tracker" ? (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <h2 className="title" style={{ margin: 0 }}>Summer Miles 2026</h2>
+            <button onClick={() => setPage("recaps")}>📊 Weekly Recaps</button>
           </div>
-          <div style={{ marginTop: 3 }}>
-            {postcards.length > 0 && (
-              <button
-                onClick={() =>
-                  setShowPostcards(!showPostcards)
-                }
-                className="toggle-btn"
-              >
-                {showPostcards ? "▼" : "▶"} Postcards
+
+          <div className="controls">
+            <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input placeholder="Miles" type="number" value={miles} onChange={(e) => setMiles(e.target.value)} />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <button onClick={addRun} disabled={!routeDistance}>Add</button>
+          </div>
+
+          {routeDistance && (
+            <p>
+              {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles ({(progress * 100).toFixed(0)}%)
+            </p>
+          )}
+
+          {mapError && <p className="error-text">Map failed to load. Check your token and WebGL support.</p>}
+
+          <div ref={mapContainer} className="map-container" />
+
+          <div className="section">
+            <div className="section-lg">
+              <button onClick={() => setShowLog(!showLog)} className="toggle-btn">
+                {showLog ? "▼" : "▶"} Run Log
               </button>
-            )}
 
-            {showPostcards && (
-              <div>
-                {postcards.length === 0 && (
-                  <p>No cities reached yet.</p>
-                )}
-
-                <div className="postcard-grid">
-                  {postcards.map((p, index) => (
-                    <div
-                      key={`${p.city}-${index}`}
-                      className="postcard-card"
-                    >
-                      <img
-                        src={p.image}
-                        alt={p.city}
-                        className="postcard-image"
-                      />
-
-                      <div className="postcard-footer">
-                        <div>
-                          <strong>{p.city}</strong>
-                          <div className="runner-name">
-                            {p.runner}
-                          </div>
+              {showLog && (
+                <ul className="run-log">
+                  {/* Create a shallow copy and reverse for display only */}
+                  {[...runs].reverse().map((r) => (
+                    <li key={r.id} className="run-item">
+                      <span>
+                        ({r.date} {r.time?.slice(0, 5)}): {r.name}: {r.miles} mi
+                      </span>
+                      {pendingDelete === r.id ? (
+                        <div className="delete-actions">
+                          <button onClick={() => deleteRun(r.id)}>Confirm</button>
+                          <button className="secondary-btn" onClick={() => setPendingDelete(null)}>Cancel</button>
                         </div>
-
-                        <a
-                          href={p.image}
-                          download={`${p.city}-postcard.png`}
-                          className="download-link"
-                        >
-                          Download
-                        </a>
-                      </div>
-                    </div>
+                      ) : (
+                        <button onClick={() => setPendingDelete(r.id)}>Remove</button>
+                      )}
+                    </li>
                   ))}
+                </ul>
+              )}
+            </div>
+
+            <div style={{ marginTop: 3 }}>
+              {postcards.length > 0 && (
+                <button onClick={() => setShowPostcards(!showPostcards)} className="toggle-btn">
+                  {showPostcards ? "▼" : "▶"} Postcards
+                </button>
+              )}
+
+              {showPostcards && (
+                <div>
+                  {postcards.length === 0 && <p>No cities reached yet.</p>}
+                  <div className="postcard-grid">
+                    {postcards.map((p, index) => (
+                      <div key={`${p.city}-${index}`} className="postcard-card">
+                        <img src={p.image} alt={p.city} className="postcard-image" />
+                        <div className="postcard-footer">
+                          <div>
+                            <strong>{p.city}</strong>
+                            <div className="runner-name">{p.runner}</div>
+                          </div>
+                          <a href={p.image} download={`${p.city}-postcard.png`} className="download-link">
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : (
+        <WeeklyRecapsPage onBack={() => setPage("tracker")} />
+      )}
+    </div>
   );
 }
