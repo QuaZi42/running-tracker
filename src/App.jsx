@@ -245,7 +245,9 @@ export default function RunningProgressTracker() {
           if (payload.eventType === "INSERT") {
             setRuns((prev) =>
               [...prev, payload.new].sort(
-                new Date(`${b.date}T${b.time || "00:00:00"}`) - new Date(`${a.date}T${a.time || "00:00:00"}`)
+              (a, b) =>
+                new Date(`${b.date}T${b.time || "00:00:00"}`) -
+                new Date(`${a.date}T${a.time || "00:00:00"}`)
               )
             );
           } else if (payload.eventType === "DELETE") {
