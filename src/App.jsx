@@ -133,6 +133,20 @@ const milestones = [
   },
 
   {
+    name: "Elko, NV",
+    miles: 2584.4,
+    image:
+      "https://i.postimg.cc/mZcmVXNx/image.png",
+  },
+
+  {
+    name: "Reno, NV",
+    miles: 2876.5,
+    image:
+      "https://i.postimg.cc/TPVGMfWJ/image.png",
+  },
+
+  {
     name: "Ryan Zhao Memorial, CA",
     miles: 3095.47,
     image:
