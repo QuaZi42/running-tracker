@@ -50,10 +50,18 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/RZnB1Z3z/image.png",
   },
+  artem: {
+    displayName: "Artem",
+    image:
+      "https://i.postimg.cc/LsrF8M5f/image.png",
+  },
+  lucas: {
+    displayName: "Lucas",
+    image:
+      "https://i.postimg.cc/W326rdh9/image.png",
+  },
 };
 
-
-  
 
 const milestones = [
   {
