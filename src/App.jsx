@@ -96,7 +96,14 @@ const milestones = [
     name: "Chicago, IL",
     miles: 961.8,
     image:
-      "https://cdn.craft.cloud/101e4579-0e19-46b6-95c6-7eb27e4afc41/assets/uploads/pois/chicago-illinois-frommers.jpg?fit=cover&height=630&width=1200&s=MWfr79bwHIhjNMa-ds4td5LEsr0JeCbUBoMune808xE",
+      "https://i.postimg.cc/mZ3kJmpN/image.png",
+  },
+
+  {
+    name: "Davenport, IA",
+    miles: 1132.5,
+    image:
+      "https://i.postimg.cc/kgTtZT4j/image.png",
   },
 
   {
