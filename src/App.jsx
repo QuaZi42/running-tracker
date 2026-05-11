@@ -16,65 +16,83 @@ const END = [-121.91614025881732, 37.765293505678414];
 const RUNNERS = {
   andrii: {
     displayName: "Andrii",
+    color:  "#371380",
     image:
       "https://i.postimg.cc/NfjGXt7H/image.png",
   },
 
   ryan: {
     displayName: "Ryan",
+    color:  "#ab0707",
     image:
       "https://i.postimg.cc/QNSnFZdP/image.png",
   },
-  nathan: {
-    displayName: "Nathan",
-    image:
-      "https://i.postimg.cc/TYHb0qQ1/image.png",
-  },
   benjamin: {
     displayName: "Benjamin",
+    color:  "#a47316",
     image:
       "https://i.postimg.cc/R0pNRMvp/image.png",
   },
   jimmy: {
     displayName: "Jimmy",
+    color:  "#ffa96e",
     image:
       "https://i.postimg.cc/Y0tS9MZr/image.png",
   },
   ben_h: {
     displayName: "Ben_H",
+    color:  "#f12936",
     image:
       "https://i.postimg.cc/XqgZYvgL/image.png",
   },
   sebastian: {
     displayName: "Sebastian",
+    color:  "#cc08c2",
     image:
       "https://i.postimg.cc/RZnB1Z3z/image.png",
   },
   artem: {
     displayName: "Artem",
+    color:  "#1961a8",
     image:
       "https://i.postimg.cc/LsrF8M5f/image.png",
   },
   lucas: {
     displayName: "Lucas",
+    color:  "#616791",
     image:
       "https://i.postimg.cc/W326rdh9/image.png",
   },
   boris: {
     displayName: "Boris",
+    color:  "#1fb5a4",
     image:
       "https://i.postimg.cc/kXGHJmKh/image.png",
   },
   hugh: {
     displayName: "Hugh",
+    color:  "#2138eb",
     image:
       "https://i.postimg.cc/jj2Qpz95/image.png",
   },
   hrs: {
     displayName: "HRS",
+    color:  "#49eba7",
     image:
       "https://i.postimg.cc/g0xtVFYY/image.png",
   },
+  levi: {
+    displayName: "Levi",
+    color:  "#99211f",
+    image:
+      "https://i.postimg.cc/YqWL5db8/image.png",
+  },
+  ronan: {
+    displayName: "Ronan",
+    color:  "#dba819",
+    image:
+      "https://i.postimg.cc/HkTLND3G/image.png",
+  }
   
 };
 
@@ -228,6 +246,7 @@ export default function RunningProgressTracker() {
   const [miles, setMiles] = useState("");
   const [postcards, setPostcards] = useState([]);
   const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
+  const [monoGreen, setMonoGreen] = useState(true);
 
   const [showLog, setShowLog] = useState(false);
   const [showPostcards, setShowPostcards] = useState(false);
@@ -273,8 +292,8 @@ export default function RunningProgressTracker() {
             setRuns((prev) =>
               [...prev, payload.new].sort(
                 (a, b) =>
-                  new Date(`${b.date}T${b.time || "00:00:00"}`) -
-                  new Date(`${a.date}T${a.time || "00:00:00"}`)
+                  new Date(`${a.date}T${a.time || "00:00:00"}`) -
+                  new Date(`${b.date}T${b.time || "00:00:00"}`)
               )
             );
           } else if (payload.eventType === "DELETE") {
@@ -340,20 +359,31 @@ export default function RunningProgressTracker() {
           paint: { "line-width": 5 },
         });
 
-        map.addSource("progress", {
-          type: "geojson",
-          data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
-        });
+        Object.keys(RUNNERS).forEach((runnerKey) => {
+          map.addSource(`progress-${runnerKey}`, {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: [],
+              },
+            },
+          });
 
-        map.addLayer({
-          id: "progress-line",
-          type: "line",
-          source: "progress",
-          paint: {
-            "line-width": 6,
-            "line-color": "#22c55e",
-            "line-cap": "round",
-          },
+          map.addLayer({
+            id: `progress-line-${runnerKey}`,
+            type: "line",
+            source: `progress-${runnerKey}`,
+            paint: {
+              "line-width": 6,
+              "line-color": monoGreen
+                ? "#1e9c17"
+                : RUNNERS[runnerKey]?.color || "#000000",
+              "line-cap": "round",
+              "line-opacity": 0.85,
+            },
+          });
         });
 
         markerRef.current = new mapboxgl.Marker().setLngLat(START).addTo(map);
@@ -372,49 +402,178 @@ export default function RunningProgressTracker() {
 
   // Update marker + progress line
   useEffect(() => {
-    if (!route || !markerRef.current || !routeDistance || !mapRef.current) return;
+  if (!route || !routeDistance || !mapRef.current) return;
 
-    const targetMiles = Math.min(totalMiles, routeDistance);
-    let cumulative = [0];
+  // Build cumulative distances along route
+  let cumulative = [0];
 
-    for (let i = 1; i < route.length; i++) {
-      const [lng1, lat1] = route[i - 1];
-      const [lng2, lat2] = route[i];
-      const dlng = (lng2 - lng1) * Math.cos((lat1 * Math.PI) / 180);
-      const dlat = lat2 - lat1;
-      const distDeg = Math.sqrt(dlng * dlng + dlat * dlat);
-      const distMiles = distDeg * 69.11;
-      cumulative.push(cumulative[i - 1] + distMiles);
+  for (let i = 1; i < route.length; i++) {
+    const [lng1, lat1] = route[i - 1];
+    const [lng2, lat2] = route[i];
+
+    const dlng = (lng2 - lng1) * Math.cos((lat1 * Math.PI) / 180);
+    const dlat = lat2 - lat1;
+
+    const distDeg = Math.sqrt(dlng * dlng + dlat * dlat);
+    const distMiles = distDeg * 69.11;
+
+    cumulative.push(cumulative[i - 1] + distMiles);
+  }
+
+  const totalRouteMiles = cumulative[cumulative.length - 1];
+
+  function getRunnerKey(name) {
+      const key = name.toLowerCase().trim();
+      return RUNNERS[key] ? key : "unknown";
     }
 
-    const totalRouteMiles = cumulative[cumulative.length - 1];
-    const targetDist = (targetMiles / routeDistance) * totalRouteMiles;
+    // Build ordered segments directly from runs
+  const orderedSegments = runs.map((run) => ({
+    runnerKey: getRunnerKey(run.name),
+    miles: run.miles,
+  }));
+
+  // Draw each run as a continuous segment
+  let cumulativeStart = 0;
+
+  // Store all segments per runner
+  const runnerCoords = {};
+
+  orderedSegments.forEach(({ runnerKey, miles }) => {
+    const startMiles = cumulativeStart;
+    const endMiles = cumulativeStart + miles;
+
+    cumulativeStart = endMiles;
+
+    const startDist =
+      (Math.min(startMiles, routeDistance) / routeDistance) *
+      totalRouteMiles;
+
+    const endDist =
+      (Math.min(endMiles, routeDistance) / routeDistance) *
+      totalRouteMiles;
+
+    function getPointAtDistance(targetDist) {
+      let i = 0;
+
+      while (
+        i < cumulative.length - 1 &&
+        cumulative[i + 1] < targetDist
+      ) {
+        i++;
+      }
+
+      const segLen = cumulative[i + 1] - cumulative[i];
+
+      const t =
+        segLen > 0
+          ? (targetDist - cumulative[i]) / segLen
+          : 0;
+
+      const a = route[i];
+      const b = route[Math.min(i + 1, route.length - 1)];
+
+      return {
+        index: i,
+        point: [
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+        ],
+      };
+    }
+
+    const startData = getPointAtDistance(startDist);
+    const endData = getPointAtDistance(endDist);
+
+    const progressCoords = [
+      startData.point,
+      ...route.slice(startData.index + 1, endData.index + 1),
+      endData.point,
+    ];
+
+    // Initialize runner array
+    if (!runnerCoords[runnerKey]) {
+      runnerCoords[runnerKey] = [];
+    }
+
+    // Append segment
+    runnerCoords[runnerKey].push(progressCoords);
+  });
+
+  // After all runs processed, update map sources
+  Object.entries(runnerCoords).forEach(([runnerKey, coords]) => {
+    const source = mapRef.current.getSource(`progress-${runnerKey}`);
+
+    if (source) {
+      source.setData({
+        type: "Feature",
+        geometry: {
+          type: "MultiLineString",
+          coordinates: coords,
+        },
+      });
+    }
+  });
+  Object.keys(RUNNERS).forEach((runnerKey) => {
+    if (!runnerCoords[runnerKey]) {
+      const source = mapRef.current.getSource(`progress-${runnerKey}`);
+
+      if (source) {
+        source.setData({
+          type: "Feature",
+          geometry: {
+            type: "MultiLineString",
+            coordinates: [],
+          },
+        });
+      }
+    }
+  });
+  Object.keys(RUNNERS).forEach((runnerKey) => {
+    if (mapRef.current.getLayer(`progress-line-${runnerKey}`)) {
+      mapRef.current.setPaintProperty(
+        `progress-line-${runnerKey}`,
+        "line-color",
+        monoGreen
+          ? "#1e9c17"
+          : RUNNERS[runnerKey]?.color || "#000000"
+      );
+    }
+  });
+    // Overall marker still uses total group miles
+  if (markerRef.current) {
+    const totalMiles = runs.reduce((s, r) => s + r.miles, 0);
+
+    const targetMiles = Math.min(totalMiles, routeDistance);
+
+    const targetDist =
+      (targetMiles / routeDistance) * totalRouteMiles;
 
     let i = 0;
-    while (i < cumulative.length - 1 && cumulative[i + 1] < targetDist) i++;
+
+    while (
+      i < cumulative.length - 1 &&
+      cumulative[i + 1] < targetDist
+    ) {
+      i++;
+    }
 
     const segLen = cumulative[i + 1] - cumulative[i];
-    const t = segLen > 0 ? (targetDist - cumulative[i]) / segLen : 0;
+
+    const t =
+      segLen > 0
+        ? (targetDist - cumulative[i]) / segLen
+        : 0;
 
     const a = route[i];
     const b = route[Math.min(i + 1, route.length - 1)];
-    const lng = a[0] + (b[0] - a[0]) * t;
-    const lat = a[1] + (b[1] - a[1]) * t;
 
-    const currentPos = [lng, lat];
-
-    markerRef.current.setLngLat(currentPos);
-
-    const progressSource = mapRef.current.getSource("progress");
-    if (progressSource) {
-      const progressCoords = [...route.slice(0, i + 1), currentPos];
-      progressSource.setData({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: progressCoords },
-      });
-    }
-  }, [totalMiles, route, routeDistance]);
-
+    markerRef.current.setLngLat([
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+    ]);
+  }
+}, [runs, route, routeDistance, monoGreen]);
   // Milestone postcards
 // Keep this ref at the top level of your component
 const processedMilestonesRef = useRef(new Set());
@@ -661,9 +820,30 @@ useEffect(() => {
     <div className="app-container">
       {page === "tracker" ? (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <h2 className="title" style={{ margin: 0 }}>Summer Miles 2026</h2>
-            <button onClick={() => setPage("recaps")}>📊 Weekly Recaps</button>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 18,
+            }}
+          >
+            <h2 className="title" style={{ margin: 0 }}>
+              Summer Miles 2026
+            </h2>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setPage("recaps")}>
+                📊 Weekly Recaps
+              </button>
+
+              <button
+                onClick={() => setMonoGreen((v) => !v)}
+                style={{ minWidth: 150 }}
+              >
+                {monoGreen ? "🟢 All Green" : "🎨 Normal Colors"}
+              </button>
+            </div>
           </div>
 
           <div className="controls">
@@ -683,6 +863,18 @@ useEffect(() => {
           {mapError && <p className="error-text">Map failed to load. Check your token and WebGL support.</p>}
 
           <div ref={mapContainer} className="map-container" />
+
+          <div className="legend">
+            {Object.entries(RUNNERS).map(([key, runner]) => (
+              <div key={key} className="legend-item">
+                <div
+                  className="legend-color"
+                  style={{ background: RUNNERS[key]?.color }}
+                />
+                {runner.displayName}
+              </div>
+            ))}
+          </div>
 
           <div className="section">
             <div className="section-lg">
