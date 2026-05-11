@@ -60,6 +60,17 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/W326rdh9/image.png",
   },
+  boris: {
+    displayName: "Boris",
+    image:
+      "https://i.postimg.cc/kXGHJmKh/image.png",
+  },
+  hugh: {
+    displayName: "Hugh",
+    image:
+      "https://i.postimg.cc/jj2Qpz95/image.png",
+  }
+  
 };
 
 
