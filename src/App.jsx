@@ -69,7 +69,12 @@ const RUNNERS = {
     displayName: "Hugh",
     image:
       "https://i.postimg.cc/jj2Qpz95/image.png",
-  }
+  },
+  hrs: {
+    displayName: "HRS",
+    image:
+      "https://i.postimg.cc/g0xtVFYY/image.png",
+  },
   
 };
 
