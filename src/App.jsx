@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@supabase/supabase-js";
 import WeeklyRecapsPage from "./WeeklyRecapsPage";
 
+// something 
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
