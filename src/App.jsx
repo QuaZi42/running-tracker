@@ -103,7 +103,7 @@ const RUNNERS = {
     color:  "#da020e",
     image:
       "https://i.postimg.cc/dQpHvHRz/image.png",
-  }
+  },
   
   
 };
