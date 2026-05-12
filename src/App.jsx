@@ -98,6 +98,12 @@ const RUNNERS = {
     color:  "#0004ab",
     image:
       "https://i.postimg.cc/vBmV2Gp1/image.png",
+  },
+  newman: {
+    displayName: "Newman",
+    color:  "#da020e",
+    image:
+      "https://i.postimg.cc/dQpHvHRz/image.png",
   }
   
   
@@ -105,6 +111,13 @@ const RUNNERS = {
 
 
 const milestones = [
+  {
+    name: "Springfield, MA",
+    miles: 87.8,
+    image:
+      "https://i.postimg.cc/pLpL8d5d/image.png",
+  },
+  
   {
     name: "Albany, NY",
     miles: 165.9,
