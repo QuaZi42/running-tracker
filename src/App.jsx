@@ -92,7 +92,14 @@ const RUNNERS = {
     color:  "#dba819",
     image:
       "https://i.postimg.cc/HkTLND3G/image.png",
+  },
+  ishan: {
+    displayName: "Ishan",
+    color:  "#0004ab",
+    image:
+      "https://i.postimg.cc/vBmV2Gp1/image.png",
   }
+  
   
 };
 
@@ -274,9 +281,8 @@ export default function RunningProgressTracker() {
   useEffect(() => {
     supabase
       .from("runs")
-      .select("*")
-      .order("date", { ascending: true })
-      .order("time", { ascending: true })
+      .select("*, timestamp_utc, local_time, timezone")
+      .order("timestamp_utc", { ascending: true })   // ← Best sorting
       .then(({ data, error }) => {
         if (error) console.error("Failed to fetch runs:", error);
         else setRuns(data || []);
@@ -635,62 +641,71 @@ useEffect(() => {
   checkMilestones();
   }, [runs]);
 
+  const getUserTimezone = () => {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  };
+
+  const getTimezoneAbbr = (tz) => {
+    try {
+      return new Intl.DateTimeFormat('en', { 
+        timeZone: tz, 
+        timeZoneName: 'short' 
+      }).formatToParts(new Date())
+      .find(p => p.type === 'timeZoneName')?.value || tz;
+    } catch {
+      return tz;
+    }
+  };
+
   const addRun = async () => {
     const parsedMiles = parseFloat(miles);
-
-    // Better validation + logging
-    if (!name?.trim()) {
-      console.warn("Name is required");
-      alert("Please enter a name");
-      return;
-    }
-    if (isNaN(parsedMiles) || parsedMiles <= 0) {
-      console.warn("Invalid miles:", miles);
-      alert("Please enter a valid number of miles");
+    if (!name?.trim() || isNaN(parsedMiles) || parsedMiles <= 0) {
+      alert("Please enter valid name and miles");
       return;
     }
 
-    console.log("Attempting to insert:", { name: name.trim(), miles: parsedMiles });
+    const localDateTime = `${date}T${time}`;
+    const dateObj = new Date(localDateTime);           // interpreted in user's local TZ
+    const timestampUtc = dateObj.toISOString();
 
     const { data, error } = await supabase
       .from("runs")
       .insert({
         name: name.trim(),
         miles: parsedMiles,
-        date: date, // ← new field
-        time: `${time}:00`,
+        date: date,                    // keep for now
+        local_time: time,
+        timezone: getUserTimezone(),
+        timestamp_utc: timestampUtc,
       })
-      .select();  // ← add .select() to get the inserted row back
+      .select();
 
     if (error) {
-      console.error("Supabase insert error:", error);
-      alert(`Failed to add run: ${error.message}`);
+      console.error(error);
+      alert("Failed to add run");
     } else {
-      console.log("Successfully inserted:", data);
       setName("");
       setMiles("");
-      const d = new Date();
-      const offset = d.getTimezoneOffset();
-      const local = new Date(d.getTime() - offset * 60000);
-      setDate(local.toISOString().split("T")[0]);
-      // Optional: you can manually add it too as backup
-      // setRuns(prev => [...prev, data[0]]);
+      // reset to current local date/time
+      const now = new Date();
+      setDate(now.toISOString().split("T")[0]);
+      setTime(now.toTimeString().slice(0, 5));
     }
   };
 
   const deleteRun = async (id) => {
-  const { error } = await supabase.from("runs").delete().eq("id", id);
-  
-  if (!error) {
-    // 1. Clear the "already processed" memory
-    processedMilestonesRef.current.clear();
-    // 2. Wipe the postcards so they are re-generated based on remaining runs
-    setPostcards([]);
-    setPendingDelete(null);
-  } else {
-    console.error("Failed to delete run:", error);
-  }
-};
+    const { error } = await supabase.from("runs").delete().eq("id", id);
+    
+    if (!error) {
+      // 1. Clear the "already processed" memory
+      processedMilestonesRef.current.clear();
+      // 2. Wipe the postcards so they are re-generated based on remaining runs
+      setPostcards([]);
+      setPendingDelete(null);
+    } else {
+      console.error("Failed to delete run:", error);
+    }
+  };
 
   async function generatePostcard(city, runnerName) {
     const runner = RUNNERS[runnerName.toLowerCase().trim()];
@@ -888,7 +903,10 @@ useEffect(() => {
                   {[...runs].reverse().map((r) => (
                     <li key={r.id} className="run-item">
                       <span>
-                        ({r.date} {r.time?.slice(0, 5)}): {r.name}: {r.miles} mi
+                        {r.local_time 
+                          ? `${r.date} ${r.local_time} (${getTimezoneAbbr(r.timezone) || 'local'})`
+                          : `(${r.date} ${r.time?.slice(0,5)})`
+                        }: {r.name}: {r.miles} mi
                       </span>
                       {pendingDelete === r.id ? (
                         <div className="delete-actions">
