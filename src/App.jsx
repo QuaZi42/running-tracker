@@ -136,7 +136,7 @@ const milestones = [
     name: "Buffalo, NY",
     miles: 450.0,
     image:
-      "https://i.postimg.cc/bvzDr0tV/image.png",
+      "https://cdn-imgix.headout.com/media/images/320d13c49c3e09e627ff9606975e27ad-Table%20Rock.jpg?auto=format&q=90&fit=crop&crop=faces",
   },
 
   {
