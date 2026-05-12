@@ -21,7 +21,12 @@ function getWeekBounds(date = new Date()) {
   const sun = new Date(mon);
   sun.setDate(mon.getDate() + 6);
   
-  const fmt = (x) => x.toISOString().split("T")[0];
+  const fmt = (x) => {
+    const year = x.getFullYear();
+    const month = String(x.getMonth() + 1).padStart(2, "0");
+    const day = String(x.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   return { start: fmt(mon), end: fmt(sun) };
 }
 
