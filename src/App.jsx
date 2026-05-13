@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@supabase/supabase-js";
 import WeeklyRecapsPage from "./WeeklyRecapsPage";
 
+
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -98,25 +99,13 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/vBmV2Gp1/image.png",
   },
-  newman: {
-    displayName: "Newman",
-    color:  "#da020e",
-    image:
-      "https://i.postimg.cc/dQpHvHRz/image.png",
-  },
+  
   
   
 };
 
 
 const milestones = [
-  {
-    name: "Springfield, MA",
-    miles: 87.8,
-    image:
-      "https://i.postimg.cc/pLpL8d5d/image.png",
-  },
-  
   {
     name: "Albany, NY",
     miles: 165.9,
@@ -135,7 +124,7 @@ const milestones = [
     name: "Buffalo, NY",
     miles: 450.0,
     image:
-      "https://i.postimg.cc/ydNQ62ry/image.png",
+      "https://i.postimg.cc/bvzDr0tV/image.png",
   },
 
   {
@@ -289,7 +278,7 @@ export default function RunningProgressTracker() {
   const totalMiles = useMemo(() => runs.reduce((sum, r) => sum + r.miles, 0), [runs]);
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
 
-  // Fetch runs + real-time subscription.
+  // Fetch runs + real-time subscription
   useEffect(() => {
     supabase
       .from("runs")
