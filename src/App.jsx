@@ -289,7 +289,7 @@ export default function RunningProgressTracker() {
   const totalMiles = useMemo(() => runs.reduce((sum, r) => sum + r.miles, 0), [runs]);
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
 
-  // Fetch runs + real-time subscription
+  // Fetch runs + real-time subscription.
   useEffect(() => {
     supabase
       .from("runs")
