@@ -978,6 +978,32 @@ useEffect(() => {
               )}
             </div>
           </div>
+          {/* Footer Banner */}
+            <div
+              style={{
+                marginTop: 40,
+                padding: "14px 20px",
+                borderTop: "1px solid rgba(255,255,255,0.15)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 10,
+                fontSize: 14,
+                opacity: 0.8,
+              }}
+            >
+              <div>
+                <strong>Summer Miles 2026</strong>
+                <span style={{ marginLeft: 8 }}>v1.1.1</span>
+              </div>
+
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                <span>Developed by Andrii Vedmid</span>
+                <span>Map Data © Mapbox</span>
+                <span>Powered by Supabase</span>
+              </div>
+            </div>
         </>
       ) : (
         <WeeklyRecapsPage onBack={() => setPage("tracker")} />
