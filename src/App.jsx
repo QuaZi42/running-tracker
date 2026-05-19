@@ -4,7 +4,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { createClient } from "@supabase/supabase-js";
 import WeeklyRecapsPage from "./WeeklyRecapsPage";
 
-
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -47,7 +46,7 @@ const RUNNERS = {
   },
   sebastian: {
     displayName: "Sebastian",
-    color:  "#cc08c2",
+    color:  "#ffa500",
     image:
       "https://i.postimg.cc/RZnB1Z3z/image.png",
   },
@@ -83,7 +82,7 @@ const RUNNERS = {
   },
   levi: {
     displayName: "Levi",
-    color:  "#99211f",
+    color:  "#008080",
     image:
       "https://i.postimg.cc/YqWL5db8/image.png",
   },
@@ -98,13 +97,40 @@ const RUNNERS = {
     color:  "#0004ab",
     image:
       "https://i.postimg.cc/vBmV2Gp1/image.png",
-  }
+  },
+  newman: {
+    displayName: "Newman",
+    color:  "#da020e",
+    image:
+      "https://i.postimg.cc/dQpHvHRz/image.png",
+  },
+  cedric: {
+    displayName: "Cedric",
+    color:  "#0000ee",
+    image:
+      "https://i.postimg.cc/kMsw-FwFV/image.png",
+  },
+  alexander: {
+    displayName: "Alexander",
+    color:  "#00ee00",
+    image:
+      "https://i.postimg.cc/DzcbkpzM/image.png",
+  },
+
+  
   
   
 };
 
 
 const milestones = [
+  {
+    name: "Springfield, MA",
+    miles: 87.8,
+    image:
+      "https://i.postimg.cc/pLpL8d5d/image.png",
+  },
+  
   {
     name: "Albany, NY",
     miles: 165.9,
@@ -123,7 +149,7 @@ const milestones = [
     name: "Buffalo, NY",
     miles: 450.0,
     image:
-      "https://i.postimg.cc/bvzDr0tV/image.png",
+      "https://i.postimg.cc/ydNQ62ry/image.png",
   },
 
   {
