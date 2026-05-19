@@ -88,7 +88,7 @@ const RUNNERS = {
   },
   ronan: {
     displayName: "Ronan",
-    color:  "#dba819",
+    color:  "#800080",
     image:
       "https://i.postimg.cc/HkTLND3G/image.png",
   },
