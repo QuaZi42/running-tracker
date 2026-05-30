@@ -19,7 +19,6 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/NfjGXt7H/image.png",
   },
-
   ryan: {
     displayName: "Ryan",
     color:  "#ab0707",
@@ -121,6 +120,12 @@ const RUNNERS = {
     color:  "#be7977",
     image:
       "https://i.postimg.cc/gJyB3WN2/image.png",
+  },
+  paul: {
+    displayName: "Paul",
+    color:  "#f0a1a1",
+    image:
+      "https://i.postimg.cc/wBcGNYn3/image.png",
   },
 };
 
