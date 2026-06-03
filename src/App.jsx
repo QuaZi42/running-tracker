@@ -132,7 +132,25 @@ const RUNNERS = {
     color:  "#a7e4d4",
     image:
       "https://i.postimg.cc/BvRQdfKt/image.png",
-  }
+  },
+  caroline: {
+    displayName: "Caroline",
+    color:  "#5e82d8",
+    image:
+      "https://i.postimg.cc/TPJCsfSD/image.png",
+  },
+  nicolas: {
+    displayName: "Nicolas",
+    color:  "#d7c743",
+    image:
+      "https://i.postimg.cc/TPJCsfSD/image.png",
+  },
+  ellie: {
+    displayName: "Ellie",
+    color:  "#34d8d0",
+    image:
+      "https://i.postimg.cc/TPJCsfSD/image.png",
+  },
 };
 
 
