@@ -127,6 +127,12 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/wBcGNYn3/image.png",
   },
+  andy: {
+    displayName: "Andy",
+    color:  "#a7e4d4",
+    image:
+      "https://i.postimg.cc/BvRQdfKt/image.png",
+  }
 };
 
 
@@ -1002,7 +1008,7 @@ useEffect(() => {
             >
               <div>
                 <strong>Summer Miles 2026</strong>
-                <span style={{ marginLeft: 8 }}>v1.1.2</span>
+                <span style={{ marginLeft: 8 }}>v1.1.3</span>
               </div>
 
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
