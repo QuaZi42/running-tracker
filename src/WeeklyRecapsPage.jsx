@@ -119,51 +119,81 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
   const [status, setStatus] = useState("");
 
   async function generateThisWeek() {
-    setLoading(true);
-    const { start, end } = getWeekBounds(targetDate);
-    setStatus("Syncing...");
+  setLoading(true);
+  setStatus("Syncing all weeks...");
 
-    const { data: existing } = await supabase.from("weekly_recaps").select("id").eq("week_start", start).single();
-    const { data: runs } = await supabase.from("runs").select("*").gte("date", start).lte("date", end);
+  // 1. Get ALL runs (no date filtering)
+  const { data: runs, error } = await supabase
+    .from("runs")
+    .select("*");
 
-    if (!runs?.length) {
-      setStatus("No runs found.");
-      setLoading(false);
-      return;
+  if (error || !runs?.length) {
+    setStatus("No runs found.");
+    setLoading(false);
+    return;
+  }
+
+  // 2. Group runs by week_start
+  const weeks = new Map();
+
+  for (const r of runs) {
+    const { start, end } = getWeekBounds(new Date(r.date));
+    const key = start;
+
+    if (!weeks.has(key)) {
+      weeks.set(key, {
+        week_start: start,
+        week_end: end,
+        total_miles: 0,
+        run_count: 0,
+        active_days: new Set(),
+        runner_breakdown: {}
+      });
     }
 
-    const total_miles = runs.reduce((s, r) => s + r.miles, 0);
-    const byRunner = {};
-    const daySet = new Set();
-    runs.forEach(r => {
-      byRunner[r.name] = (byRunner[r.name] || 0) + r.miles;
-      daySet.add(r.date);
-    });
-    const sorted = Object.entries(byRunner).sort((a, b) => b[1] - a[1]);
-    const top_runner = sorted[0]?.[0] || "";
+    const w = weeks.get(key);
 
-    // AI Recap Fallback
-    let recap_text = `${total_miles.toFixed(1)} miles this week! Great job team.`;
+    w.total_miles += r.miles;
+    w.run_count += 1;
+    w.active_days.add(r.date);
+    w.runner_breakdown[r.name] =
+      (w.runner_breakdown[r.name] || 0) + r.miles;
+  }
+
+  // 3. Upsert each week
+  for (const w of weeks.values()) {
+    const sorted = Object.entries(w.runner_breakdown)
+      .sort((a, b) => b[1] - a[1]);
+
+    const top_runner = sorted[0]?.[0] || "";
+    const recap_text = `${w.total_miles.toFixed(1)} miles this week! Great job team.`;
 
     const payload = {
-      week_start: start, week_end: end, total_miles, 
-      top_runner, run_count: runs.length, active_days: daySet.size,
-      runner_breakdown: byRunner, recap_text
+      week_start: w.week_start,
+      week_end: w.week_end,
+      total_miles: w.total_miles,
+      top_runner,
+      run_count: w.run_count,
+      active_days: w.active_days.size,
+      runner_breakdown: w.runner_breakdown,
+      recap_text
     };
 
-    if (existing) payload.id = existing.id;
-    await supabase.from("weekly_recaps").upsert(payload);
-    
-    setStatus("✅ Updated!");
-    onGenerated();
-    setLoading(false);
+    await supabase
+      .from("weekly_recaps")
+      .upsert(payload, { onConflict: "week_start" });
   }
+
+  setStatus("✅ All weeks synced!");
+  onGenerated();
+  setLoading(false);
+}
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {status && <span style={{ fontSize: 11, opacity: 0.5 }}>{status}</span>}
       <button onClick={generateThisWeek} disabled={loading} style={{ ...NAV_BTN_STYLE, background: "#22c55e", border: "none" }}>
-        {loading ? "..." : "⚡ Sync Week"}
+        {loading ? "..." : "⚡ Sync Stats"}
       </button>
     </div>
   );
