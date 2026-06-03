@@ -232,12 +232,6 @@ export default function WeeklyRecapsPage({ onBack }) {
            <div style={{ fontSize: 14, fontWeight: 700 }}>Weekly Recaps</div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => shiftWeek(-7)} style={NAV_BTN_STYLE}>‹</button>
-          <span style={{ fontSize: 13, fontFamily: "'DM Mono'" }}>{formatDate(end)}</span>
-          <button onClick={() => shiftWeek(7)} style={NAV_BTN_STYLE}>›</button>
-        </div>
-
         <GenerateRecapButton targetDate={generationDate} onGenerated={fetchRecaps} />
       </div>
 
