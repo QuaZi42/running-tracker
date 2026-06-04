@@ -407,4 +407,37 @@ input[type="time"] {
 .run-log-filter {
   list-style: none;
   margin-bottom: 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.run-log-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.run-log-toolbar-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  min-width: 42px;
+}
+
+.segmented-control--wrap {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.sort-dir-btn {
+  flex: 0 0 auto;
+  min-width: 88px;
+  padding: 8px 14px;
+  min-height: 44px;
 }

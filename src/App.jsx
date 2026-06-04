@@ -284,6 +284,35 @@ function getEquivalentMiles(run) {
     : run.miles;
 }
 
+function getRunTimestamp(run) {
+  if (run.timestamp_utc) {
+    return new Date(run.timestamp_utc).getTime();
+  }
+  return new Date(`${run.date}T${run.local_time || "00:00:00"}`).getTime();
+}
+
+function getTimeOfDayMinutes(run) {
+  const timeStr = run.local_time || "00:00";
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+}
+
+const LOG_SORT_OPTIONS = [
+  { value: "datetime", label: "Time" },
+  { value: "distance", label: "Miles" },
+  { value: "equivalent", label: "Eq mi" },
+  { value: "name", label: "Name" },
+  { value: "timeofday", label: "Early bird" },
+];
+
+const LOG_SORT_DEFAULT_DIR = {
+  datetime: "desc",
+  distance: "desc",
+  equivalent: "desc",
+  name: "asc",
+  timeofday: "asc",
+};
+
 async function loadImage(url) {
   if (imageCache[url]) return imageCache[url];
 
@@ -303,9 +332,19 @@ async function loadImage(url) {
   });
 }
 
-function SegmentedControl({ value, onChange, options, ariaLabel }) {
+function SegmentedControl({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  className = "",
+}) {
   return (
-    <div className="segmented-control" role="group" aria-label={ariaLabel}>
+    <div
+      className={`segmented-control ${className}`.trim()}
+      role="group"
+      aria-label={ariaLabel}
+    >
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -333,6 +372,8 @@ export default function RunningProgressTracker() {
   const [miles, setMiles] = useState("");
   const [workoutType, setWorkoutType] = useState("run");
   const [logFilter, setLogFilter] = useState("all");
+  const [logSort, setLogSort] = useState("datetime");
+  const [logSortDir, setLogSortDir] = useState("desc");
 
   const [postcards, setPostcards] = useState([]);
   const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
@@ -367,12 +408,45 @@ export default function RunningProgressTracker() {
   );
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
 
-  const filteredRuns = [...runs]
-    .reverse()
-    .filter((r) => {
+  const filteredRuns = useMemo(() => {
+    const filtered = runs.filter((r) => {
       if (logFilter === "all") return true;
       return r.workout_type === logFilter;
     });
+
+    const dir = logSortDir === "asc" ? 1 : -1;
+
+    return filtered.sort((a, b) => {
+      let cmp = 0;
+
+      switch (logSort) {
+        case "datetime":
+          cmp = getRunTimestamp(a) - getRunTimestamp(b);
+          break;
+        case "distance":
+          cmp = a.miles - b.miles;
+          break;
+        case "equivalent":
+          cmp = getEquivalentMiles(a) - getEquivalentMiles(b);
+          break;
+        case "name":
+          cmp = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+          break;
+        case "timeofday":
+          cmp = getTimeOfDayMinutes(a) - getTimeOfDayMinutes(b);
+          break;
+        default:
+          cmp = 0;
+      }
+
+      return cmp * dir;
+    });
+  }, [runs, logFilter, logSort, logSortDir]);
+
+  const handleLogSortChange = (sort) => {
+    setLogSort(sort);
+    setLogSortDir(LOG_SORT_DEFAULT_DIR[sort] ?? "desc");
+  };
 
   // Fetch runs + real-time subscription
   useEffect(() => {
@@ -1011,19 +1085,45 @@ useEffect(() => {
               {showLog && (
                 <ul className="run-log">
                   <li className="run-log-filter">
-                    <SegmentedControl
-                      ariaLabel="Filter run log"
-                      value={logFilter}
-                      onChange={setLogFilter}
-                      options={[
-                        { value: "all", label: "All" },
-                        { value: "run", label: "Runs" },
-                        { value: "bike", label: "Bike Rides" },
-                      ]}
-                    />
+                    <div className="run-log-toolbar">
+                      <span className="run-log-toolbar-label">Filter</span>
+                      <SegmentedControl
+                        ariaLabel="Filter run log"
+                        value={logFilter}
+                        onChange={setLogFilter}
+                        options={[
+                          { value: "all", label: "All" },
+                          { value: "run", label: "Runs" },
+                          { value: "bike", label: "Bike Rides" },
+                        ]}
+                      />
+                    </div>
+                    <div className="run-log-toolbar">
+                      <span className="run-log-toolbar-label">Sort</span>
+                      <SegmentedControl
+                        className="segmented-control--wrap"
+                        ariaLabel="Sort run log"
+                        value={logSort}
+                        onChange={handleLogSortChange}
+                        options={LOG_SORT_OPTIONS}
+                      />
+                      <button
+                        type="button"
+                        className="sort-dir-btn secondary-btn"
+                        onClick={() =>
+                          setLogSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                        }
+                        title={
+                          logSortDir === "asc"
+                            ? "Ascending — click to reverse"
+                            : "Descending — click to reverse"
+                        }
+                      >
+                        {logSortDir === "asc" ? "↑ Asc" : "↓ Desc"}
+                      </button>
+                    </div>
                   </li>
 
-                  {/* Create a shallow copy and reverse for display only */}
                   {filteredRuns.map((r) => (
                     <li key={r.id} className="run-item">
                       <span>
@@ -1114,7 +1214,7 @@ useEffect(() => {
             >
               <div>
                 <strong>Summer Miles 2026</strong>
-                <span style={{ marginLeft: 8 }}>v1.2</span>
+                <span style={{ marginLeft: 8 }}>v1.2.1</span>
               </div>
 
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
