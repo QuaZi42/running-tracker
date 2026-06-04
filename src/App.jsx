@@ -155,7 +155,7 @@ const RUNNERS = {
     displayName: "Avery",
     color:  "#48d087",
     image:
-      "https://i.postimg.cc/TPJCsfSD/image.png",
+      "https://i.postimg.cc/kGbY80yB/image.png",
   },
 };
 
