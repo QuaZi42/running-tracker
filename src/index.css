@@ -441,3 +441,9 @@ input[type="time"] {
   padding: 8px 14px;
   min-height: 44px;
 }
+
+.run-log-name-filter {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 100%;
+}

@@ -301,15 +301,13 @@ const LOG_SORT_OPTIONS = [
   { value: "datetime", label: "Time" },
   { value: "distance", label: "Miles" },
   { value: "equivalent", label: "Eq mi" },
-  { value: "name", label: "Name" },
-  { value: "timeofday", label: "Early bird" },
+  { value: "timeofday", label: "Time of Day" },
 ];
 
 const LOG_SORT_DEFAULT_DIR = {
   datetime: "desc",
   distance: "desc",
   equivalent: "desc",
-  name: "asc",
   timeofday: "asc",
 };
 
@@ -372,6 +370,7 @@ export default function RunningProgressTracker() {
   const [miles, setMiles] = useState("");
   const [workoutType, setWorkoutType] = useState("run");
   const [logFilter, setLogFilter] = useState("all");
+  const [logNameFilter, setLogNameFilter] = useState("");
   const [logSort, setLogSort] = useState("datetime");
   const [logSortDir, setLogSortDir] = useState("desc");
 
@@ -409,9 +408,17 @@ export default function RunningProgressTracker() {
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
 
   const filteredRuns = useMemo(() => {
+    const nameQuery = logNameFilter.trim().toLowerCase();
+
     const filtered = runs.filter((r) => {
-      if (logFilter === "all") return true;
-      return r.workout_type === logFilter;
+      if (logFilter !== "all" && r.workout_type !== logFilter) return false;
+      if (
+        nameQuery &&
+        !r.name.toLowerCase().includes(nameQuery)
+      ) {
+        return false;
+      }
+      return true;
     });
 
     const dir = logSortDir === "asc" ? 1 : -1;
@@ -429,9 +436,6 @@ export default function RunningProgressTracker() {
         case "equivalent":
           cmp = getEquivalentMiles(a) - getEquivalentMiles(b);
           break;
-        case "name":
-          cmp = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-          break;
         case "timeofday":
           cmp = getTimeOfDayMinutes(a) - getTimeOfDayMinutes(b);
           break;
@@ -441,7 +445,7 @@ export default function RunningProgressTracker() {
 
       return cmp * dir;
     });
-  }, [runs, logFilter, logSort, logSortDir]);
+  }, [runs, logFilter, logNameFilter, logSort, logSortDir]);
 
   const handleLogSortChange = (sort) => {
     setLogSort(sort);
@@ -1060,7 +1064,7 @@ useEffect(() => {
             </p>
           )}
 
-          {mapError && <p className="error-text">Map failed to load. Check your token and WebGL support.</p>}
+          {mapError && <p className="error-text">Oops something went wrong! Refresh the page and if the problem persists, contact Andrii.</p>}
 
           <div ref={mapContainer} className="map-container" />
 
@@ -1096,6 +1100,17 @@ useEffect(() => {
                           { value: "run", label: "Runs" },
                           { value: "bike", label: "Bike Rides" },
                         ]}
+                      />
+                    </div>
+                    <div className="run-log-toolbar">
+                      <span className="run-log-toolbar-label">Name</span>
+                      <input
+                        type="search"
+                        className="run-log-name-filter"
+                        placeholder="Filter by name…"
+                        value={logNameFilter}
+                        onChange={(e) => setLogNameFilter(e.target.value)}
+                        aria-label="Filter run log by name"
                       />
                     </div>
                     <div className="run-log-toolbar">
