@@ -149,7 +149,7 @@ const RUNNERS = {
     displayName: "Ellie",
     color:  "#34d8d0",
     image:
-      "https://i.postimg.cc/G2VFxQJX/image.png",
+      "https://i.postimg.cc/MHYGpZTG/image.png",
   },
 };
 
