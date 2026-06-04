@@ -177,6 +177,15 @@ a:hover {
     width: 100%;
   }
 
+  .segmented-control {
+    width: 100%;
+  }
+
+  .segmented-control__btn {
+    flex: 1;
+    width: auto;
+  }
+
   .controls {
     display: flex;
     flex-direction: column;
@@ -341,4 +350,61 @@ input[type="time"] {
   width: 14px;
   height: 14px;
   border-radius: 999px;
+}
+
+/* SEGMENTED CONTROL (run/bike toggle, log filters) */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.segmented-control__btn {
+  background: transparent;
+  color: var(--muted);
+
+  border: none;
+  border-radius: 8px;
+
+  padding: 8px 14px;
+  min-height: 36px;
+
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.segmented-control__btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.segmented-control__btn.is-active {
+  background: var(--accent);
+  color: white;
+}
+
+.segmented-control__btn.is-active:hover {
+  background: var(--accent-hover);
+  color: white;
+}
+
+.controls .segmented-control {
+  flex: 0 0 auto;
+}
+
+.run-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.run-log-filter {
+  list-style: none;
+  margin-bottom: 14px;
 }

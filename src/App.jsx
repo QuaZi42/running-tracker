@@ -278,6 +278,12 @@ const milestones = [
 
 const imageCache = {};
 
+function getEquivalentMiles(run) {
+  return run.workout_type === "bike"
+    ? run.miles / 4
+    : run.miles;
+}
+
 async function loadImage(url) {
   if (imageCache[url]) return imageCache[url];
 
@@ -297,6 +303,23 @@ async function loadImage(url) {
   });
 }
 
+function SegmentedControl({ value, onChange, options, ariaLabel }) {
+  return (
+    <div className="segmented-control" role="group" aria-label={ariaLabel}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          className={`segmented-control__btn${value === opt.value ? " is-active" : ""}`}
+          aria-pressed={value === opt.value}
+          onClick={() => onChange(opt.value)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function RunningProgressTracker() {
   const [page, setPage] = useState("tracker");
@@ -308,6 +331,9 @@ export default function RunningProgressTracker() {
   const [runs, setRuns] = useState([]);
   const [name, setName] = useState("");
   const [miles, setMiles] = useState("");
+  const [workoutType, setWorkoutType] = useState("run");
+  const [logFilter, setLogFilter] = useState("all");
+
   const [postcards, setPostcards] = useState([]);
   const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
   const [monoGreen, setMonoGreen] = useState(true);
@@ -331,8 +357,22 @@ export default function RunningProgressTracker() {
   
   const generatingRef = useRef(new Set());
 
-  const totalMiles = useMemo(() => runs.reduce((sum, r) => sum + r.miles, 0), [runs]);
+  const totalMiles = useMemo(
+    () =>
+      runs.reduce(
+        (sum, r) => sum + getEquivalentMiles(r),
+        0
+      ),
+    [runs]
+  );
   const progress = routeDistance ? Math.min(totalMiles / routeDistance, 1) : 0;
+
+  const filteredRuns = [...runs]
+    .reverse()
+    .filter((r) => {
+      if (logFilter === "all") return true;
+      return r.workout_type === logFilter;
+    });
 
   // Fetch runs + real-time subscription
   useEffect(() => {
@@ -493,7 +533,7 @@ export default function RunningProgressTracker() {
     // Build ordered segments directly from runs
   const orderedSegments = runs.map((run) => ({
     runnerKey: getRunnerKey(run.name),
-    miles: run.miles,
+    miles: getEquivalentMiles(run),
   }));
 
   // Draw each run as a continuous segment
@@ -605,7 +645,10 @@ export default function RunningProgressTracker() {
   });
     // Overall marker still uses total group miles
   if (markerRef.current) {
-    const totalMiles = runs.reduce((s, r) => s + r.miles, 0);
+    const totalMiles = runs.reduce(
+      (s, r) => s + getEquivalentMiles(r),
+      0
+    );
 
     const targetMiles = Math.min(totalMiles, routeDistance);
 
@@ -650,7 +693,7 @@ useEffect(() => {
     const batchSeen = new Set();
 
     for (const run of runs) {
-      currentTotal += run.miles;
+      currentTotal += getEquivalentMiles(run);
 
       for (const city of milestones) {
         const crossed = currentTotal >= city.miles;
@@ -724,12 +767,14 @@ useEffect(() => {
     const localDateTime = `${date}T${time}`;
     const dateObj = new Date(localDateTime);           // interpreted in user's local TZ
     const timestampUtc = dateObj.toISOString();
+    
 
     const { data, error } = await supabase
       .from("runs")
       .insert({
         name: name.trim(),
         miles: parsedMiles,
+        workout_type: workoutType,
         date: date,                    // keep for now
         local_time: time,
         timezone: getUserTimezone(),
@@ -921,6 +966,15 @@ useEffect(() => {
           <div className="controls">
             <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
             <input placeholder="Miles" type="number" value={miles} onChange={(e) => setMiles(e.target.value)} />
+            <SegmentedControl
+              ariaLabel="Workout type"
+              value={workoutType}
+              onChange={setWorkoutType}
+              options={[
+                { value: "run", label: "🏃 Run" },
+                { value: "bike", label: "🚴 Bike" },
+              ]}
+            />
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             <button onClick={addRun} disabled={!routeDistance}>Add</button>
@@ -956,14 +1010,48 @@ useEffect(() => {
 
               {showLog && (
                 <ul className="run-log">
+                  <li className="run-log-filter">
+                    <SegmentedControl
+                      ariaLabel="Filter run log"
+                      value={logFilter}
+                      onChange={setLogFilter}
+                      options={[
+                        { value: "all", label: "All" },
+                        { value: "run", label: "Runs" },
+                        { value: "bike", label: "Bike Rides" },
+                      ]}
+                    />
+                  </li>
+
                   {/* Create a shallow copy and reverse for display only */}
-                  {[...runs].reverse().map((r) => (
+                  {filteredRuns.map((r) => (
                     <li key={r.id} className="run-item">
                       <span>
-                        {r.local_time 
-                          ? `${r.date} ${r.local_time} (${getTimezoneAbbr(r.timezone) || 'local'})`
-                          : `(${r.date} ${r.time?.slice(0,5)})`
-                        }: {r.name}: {r.miles} mi
+                        <>
+                          {r.local_time
+                            ? `${r.date} ${r.local_time} (${getTimezoneAbbr(r.timezone)})`
+                            : r.date}
+                          {" • "}
+                          {r.name}
+                          {" • "}
+
+                          {r.workout_type === "bike" ? (
+                            <>
+                              🚴 Bike:
+                              {" "}
+                              {r.miles} mi
+                              {" → "}
+                              {getEquivalentMiles(r).toFixed(1)}
+                              {" eq mi"}
+                            </>
+                          ) : (
+                            <>
+                              🏃 Run:
+                              {" "}
+                              {r.miles} mi
+                            </>
+                          )}
+                        </>
                       </span>
                       {pendingDelete === r.id ? (
                         <div className="delete-actions">
@@ -1026,7 +1114,7 @@ useEffect(() => {
             >
               <div>
                 <strong>Summer Miles 2026</strong>
-                <span style={{ marginLeft: 8 }}>v1.1.4.2</span>
+                <span style={{ marginLeft: 8 }}>v1.2</span>
               </div>
 
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>

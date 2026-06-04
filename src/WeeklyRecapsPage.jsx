@@ -30,6 +30,12 @@ function getWeekBounds(date = new Date()) {
   return { start: fmt(mon), end: fmt(sun) };
 }
 
+function getEquivalentMiles(run) {
+  return run.workout_type === "bike"
+    ? run.miles / 4
+    : run.miles;
+}
+
 function formatDate(str) {
   if (!str) return "";
   const [y, m, d] = str.split("-");
@@ -101,13 +107,17 @@ function RecapCard({ recap, weekNumber }) {
       <div style={{ padding: 24, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
         <StatCard emoji="🏆" label="Leader" value={recap.top_runner || "—"} />
         <StatCard emoji="📏" label="Total" value={recap.total_miles?.toFixed(1)} sub="miles" />
-        <StatCard emoji="🏃" label="Runs" value={recap.run_count} />
+        {recap.run_count > 0 && (
+          <StatCard emoji="🏃" label="Runs" value={recap.run_count} />
+        )}
+        {recap.bike_count > 0 && (
+          <StatCard emoji="🚴" label="Bike Rides" value={recap.bike_count} />
+        )}
       </div>
       <div style={{ padding: "0 24px 24px" }}>
         {sorted.map(([name, miles], i) => (
           <RunnerBar key={name} name={name} miles={miles} maxMiles={maxMiles} rank={i} />
         ))}
-        {expanded && <p style={{ fontStyle: "italic", opacity: 0.8, marginTop: 12, lineHeight: 1.6 }}>{recap.recap_text}</p>}
       </div>
     </div>
   );
@@ -146,6 +156,7 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
         week_end: end,
         total_miles: 0,
         run_count: 0,
+        bike_count: 0,
         active_days: new Set(),
         runner_breakdown: {}
       });
@@ -153,11 +164,15 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
 
     const w = weeks.get(key);
 
-    w.total_miles += r.miles;
-    w.run_count += 1;
+    w.total_miles += getEquivalentMiles(r);
+    if (r.workout_type === "bike") {
+      w.bike_count += 1;
+    } else {
+      w.run_count += 1;
+    }
     w.active_days.add(r.date);
     w.runner_breakdown[r.name] =
-      (w.runner_breakdown[r.name] || 0) + r.miles;
+      (w.runner_breakdown[r.name] || 0) + getEquivalentMiles(r);
   }
 
   // 3. Upsert each week
@@ -166,7 +181,6 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
       .sort((a, b) => b[1] - a[1]);
 
     const top_runner = sorted[0]?.[0] || "";
-    const recap_text = `${w.total_miles.toFixed(1)} miles this week! Great job team.`;
 
     const payload = {
       week_start: w.week_start,
@@ -174,9 +188,9 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
       total_miles: w.total_miles,
       top_runner,
       run_count: w.run_count,
+      bike_count: w.bike_count,
       active_days: w.active_days.size,
       runner_breakdown: w.runner_breakdown,
-      recap_text
     };
 
     await supabase
