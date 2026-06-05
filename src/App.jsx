@@ -336,6 +336,26 @@ async function loadImage(url) {
   });
 }
 
+function coordsEqual(a, b, eps = 1e-8) {
+  return Math.abs(a[0] - b[0]) < eps && Math.abs(a[1] - b[1]) < eps;
+}
+
+function appendRunnerSegment(segments, newCoords) {
+  if (newCoords.length < 2) return;
+
+  const lastSegment = segments[segments.length - 1];
+
+  if (
+    lastSegment &&
+    coordsEqual(lastSegment[lastSegment.length - 1], newCoords[0])
+  ) {
+    lastSegment.push(...newCoords.slice(1));
+    return;
+  }
+
+  segments.push(newCoords);
+}
+
 function SegmentedControl({
   value,
   onChange,
@@ -543,7 +563,32 @@ export default function RunningProgressTracker() {
           id: "route",
           type: "line",
           source: "route",
-          paint: { "line-width": 5 },
+          paint: {
+            "line-width": 4,
+            "line-color": "#64748b",
+            "line-opacity": 0.9,
+          },
+        });
+
+        map.addSource("progress-cumulative", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: [] },
+          },
+        });
+
+        map.addLayer({
+          id: "progress-cumulative",
+          type: "line",
+          source: "progress-cumulative",
+          paint: {
+            "line-width": 6,
+            "line-color": "#1e9c17",
+            "line-opacity": 1,
+            "line-cap": "round",
+            "line-join": "round",
+          },
         });
 
         Object.keys(RUNNERS).forEach((runnerKey) => {
@@ -567,8 +612,9 @@ export default function RunningProgressTracker() {
               "line-color": monoGreen
                 ? "#1e9c17"
                 : RUNNERS[runnerKey]?.color || "#000000",
-              "line-cap": "round",
-              "line-opacity": 0.85,
+              "line-cap": "butt",
+              "line-join": "round",
+              "line-opacity": 1,
             },
           });
         });
@@ -683,9 +729,76 @@ export default function RunningProgressTracker() {
       runnerCoords[runnerKey] = [];
     }
 
-    // Append segment
-    runnerCoords[runnerKey].push(progressCoords);
+    appendRunnerSegment(runnerCoords[runnerKey], progressCoords);
   });
+
+  const totalProgressCoords = (() => {
+    if (orderedSegments.length === 0) return [];
+
+    const totalMilesForLine = orderedSegments.reduce(
+      (sum, seg) => sum + seg.miles,
+      0
+    );
+    const endDist =
+      (Math.min(totalMilesForLine, routeDistance) / routeDistance) *
+      totalRouteMiles;
+
+    function getPointAtDistance(targetDist) {
+      let i = 0;
+
+      while (
+        i < cumulative.length - 1 &&
+        cumulative[i + 1] < targetDist
+      ) {
+        i++;
+      }
+
+      const segLen = cumulative[i + 1] - cumulative[i];
+      const t =
+        segLen > 0 ? (targetDist - cumulative[i]) / segLen : 0;
+      const a = route[i];
+      const b = route[Math.min(i + 1, route.length - 1)];
+
+      return {
+        index: i,
+        point: [
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+        ],
+      };
+    }
+
+    const endData = getPointAtDistance(endDist);
+    return [
+      route[0],
+      ...route.slice(1, endData.index + 1),
+      endData.point,
+    ];
+  })();
+
+  const cumulativeSource = mapRef.current.getSource("progress-cumulative");
+  if (cumulativeSource) {
+    cumulativeSource.setData({
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: totalProgressCoords,
+      },
+    });
+  }
+
+  if (mapRef.current.getLayer("progress-cumulative")) {
+    mapRef.current.setPaintProperty(
+      "progress-cumulative",
+      "line-color",
+      monoGreen ? "#1e9c17" : "#334155"
+    );
+    mapRef.current.setLayoutProperty(
+      "progress-cumulative",
+      "visibility",
+      totalProgressCoords.length > 1 ? "visible" : "none"
+    );
+  }
 
   // After all runs processed, update map sources
   Object.entries(runnerCoords).forEach(([runnerKey, coords]) => {
@@ -717,15 +830,21 @@ export default function RunningProgressTracker() {
     }
   });
   Object.keys(RUNNERS).forEach((runnerKey) => {
-    if (mapRef.current.getLayer(`progress-line-${runnerKey}`)) {
-      mapRef.current.setPaintProperty(
-        `progress-line-${runnerKey}`,
-        "line-color",
-        monoGreen
-          ? "#1e9c17"
-          : RUNNERS[runnerKey]?.color || "#000000"
-      );
-    }
+    const layerId = `progress-line-${runnerKey}`;
+    if (!mapRef.current.getLayer(layerId)) return;
+
+    mapRef.current.setPaintProperty(
+      layerId,
+      "line-color",
+      monoGreen
+        ? "#1e9c17"
+        : RUNNERS[runnerKey]?.color || "#000000"
+    );
+    mapRef.current.setLayoutProperty(
+      layerId,
+      "visibility",
+      monoGreen ? "none" : "visible"
+    );
   });
     // Overall marker still uses total group miles
   if (markerRef.current) {
@@ -1050,8 +1169,10 @@ useEffect(() => {
                 { value: "bike", label: "🚴 Bike" },
               ]}
             />
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <div className="controls-datetime">
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
             <button onClick={addRun} disabled={!routeDistance}>Add</button>
           </div>
 
