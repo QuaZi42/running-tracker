@@ -31,9 +31,83 @@ function getWeekBounds(date = new Date()) {
 }
 
 function getEquivalentMiles(run) {
-  return run.workout_type === "bike"
+  return isBikeRun(run)
     ? run.miles / 4
     : run.miles;
+}
+
+function isBikeRun(run) {
+  return run.workout_type === "bike" || run.workoutType === "bike";
+}
+
+function getRunDateForWeek(run) {
+  if (run.timestamp_utc) {
+    return new Date(run.timestamp_utc);
+  }
+  if (run.date) {
+    return new Date(`${run.date}T12:00:00`);
+  }
+  return new Date();
+}
+
+function buildWeekStatsFromRuns(runs) {
+  const weeks = new Map();
+
+  for (const r of runs) {
+    const { start, end } = getWeekBounds(getRunDateForWeek(r));
+    const key = start;
+
+    if (!weeks.has(key)) {
+      weeks.set(key, {
+        week_start: start,
+        week_end: end,
+        total_miles: 0,
+        run_count: 0,
+        bike_count: 0,
+        active_days: new Set(),
+        runner_breakdown: {},
+      });
+    }
+
+    const w = weeks.get(key);
+
+    w.total_miles += getEquivalentMiles(r);
+    if (isBikeRun(r)) {
+      w.bike_count += 1;
+    } else {
+      w.run_count += 1;
+    }
+    w.active_days.add(r.date);
+    w.runner_breakdown[r.name] =
+      (w.runner_breakdown[r.name] || 0) + getEquivalentMiles(r);
+  }
+
+  return weeks;
+}
+
+function weekStatsToRecapPayload(w) {
+  const sorted = Object.entries(w.runner_breakdown).sort((a, b) => b[1] - a[1]);
+
+  return {
+    week_start: w.week_start,
+    week_end: w.week_end,
+    total_miles: w.total_miles,
+    top_runner: sorted[0]?.[0] || "",
+    run_count: w.run_count,
+    bike_count: w.bike_count,
+    active_days: w.active_days.size,
+    runner_breakdown: w.runner_breakdown,
+  };
+}
+
+function enrichRecapsWithRuns(recaps, runs) {
+  const weekStats = buildWeekStatsFromRuns(runs);
+
+  return recaps.map((recap) => {
+    const computed = weekStats.get(recap.week_start);
+    if (!computed) return recap;
+    return { ...recap, ...weekStatsToRecapPayload(computed) };
+  });
 }
 
 function formatDate(str) {
@@ -129,79 +203,63 @@ function GenerateRecapButton({ targetDate, onGenerated }) {
   const [status, setStatus] = useState("");
 
   async function generateThisWeek() {
-  setLoading(true);
-  setStatus("Syncing all weeks...");
+    setLoading(true);
+    setStatus("Syncing all weeks...");
 
-  // 1. Get ALL runs (no date filtering)
-  const { data: runs, error } = await supabase
-    .from("runs")
-    .select("*");
+    const { data: runs, error } = await supabase
+      .from("runs")
+      .select("id, name, miles, date, workout_type, timestamp_utc");
 
-  if (error || !runs?.length) {
-    setStatus("No runs found.");
-    setLoading(false);
-    return;
-  }
-
-  // 2. Group runs by week_start
-  const weeks = new Map();
-
-  for (const r of runs) {
-    const { start, end } = getWeekBounds(new Date(r.date));
-    const key = start;
-
-    if (!weeks.has(key)) {
-      weeks.set(key, {
-        week_start: start,
-        week_end: end,
-        total_miles: 0,
-        run_count: 0,
-        bike_count: 0,
-        active_days: new Set(),
-        runner_breakdown: {}
-      });
+    if (error) {
+      setStatus(`Sync failed: ${error.message}`);
+      setLoading(false);
+      return;
     }
 
-    const w = weeks.get(key);
+    if (!runs?.length) {
+      setStatus("No runs found.");
+      setLoading(false);
+      return;
+    }
 
-    w.total_miles += getEquivalentMiles(r);
-    if (r.workout_type === "bike") {
-      w.bike_count += 1;
+    const weeks = buildWeekStatsFromRuns(runs);
+    let failCount = 0;
+    let bikeColumnMissing = false;
+
+    for (const w of weeks.values()) {
+      const payload = weekStatsToRecapPayload(w);
+      let { error: upsertError } = await supabase
+        .from("weekly_recaps")
+        .upsert(payload, { onConflict: "week_start" });
+
+      if (
+        upsertError &&
+        upsertError.message?.toLowerCase().includes("bike_count")
+      ) {
+        bikeColumnMissing = true;
+        const { bike_count: _bikeCount, ...payloadWithoutBikeCount } = payload;
+        ({ error: upsertError } = await supabase
+          .from("weekly_recaps")
+          .upsert(payloadWithoutBikeCount, { onConflict: "week_start" }));
+      }
+
+      if (upsertError) {
+        console.error("Weekly recap upsert failed:", upsertError);
+        failCount += 1;
+      }
+    }
+
+    if (failCount > 0) {
+      setStatus(`Sync finished with ${failCount} error(s). Check console.`);
+    } else if (bikeColumnMissing) {
+      setStatus("✅ Synced (add bike_count column in Supabase for bike stats).");
     } else {
-      w.run_count += 1;
+      setStatus("✅ All weeks synced!");
     }
-    w.active_days.add(r.date);
-    w.runner_breakdown[r.name] =
-      (w.runner_breakdown[r.name] || 0) + getEquivalentMiles(r);
+
+    onGenerated();
+    setLoading(false);
   }
-
-  // 3. Upsert each week
-  for (const w of weeks.values()) {
-    const sorted = Object.entries(w.runner_breakdown)
-      .sort((a, b) => b[1] - a[1]);
-
-    const top_runner = sorted[0]?.[0] || "";
-
-    const payload = {
-      week_start: w.week_start,
-      week_end: w.week_end,
-      total_miles: w.total_miles,
-      top_runner,
-      run_count: w.run_count,
-      bike_count: w.bike_count,
-      active_days: w.active_days.size,
-      runner_breakdown: w.runner_breakdown,
-    };
-
-    await supabase
-      .from("weekly_recaps")
-      .upsert(payload, { onConflict: "week_start" });
-  }
-
-  setStatus("✅ All weeks synced!");
-  onGenerated();
-  setLoading(false);
-}
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -226,8 +284,29 @@ export default function WeeklyRecapsPage({ onBack }) {
   };
 
   async function fetchRecaps() {
-    const { data } = await supabase.from("weekly_recaps").select("*").order("week_start", { ascending: false });
-    setRecaps(data || []);
+    const [recapsRes, runsRes] = await Promise.all([
+      supabase
+        .from("weekly_recaps")
+        .select("*")
+        .order("week_start", { ascending: false }),
+      supabase
+        .from("runs")
+        .select("id, name, miles, date, workout_type, timestamp_utc"),
+    ]);
+
+    if (recapsRes.error) {
+      console.error("Failed to fetch recaps:", recapsRes.error);
+    }
+    if (runsRes.error) {
+      console.error("Failed to fetch runs for recap enrichment:", runsRes.error);
+    }
+
+    const recaps = recapsRes.data || [];
+    const runs = runsRes.data || [];
+
+    setRecaps(
+      runs.length > 0 ? enrichRecapsWithRuns(recaps, runs) : recaps
+    );
     setLoading(false);
   }
 
