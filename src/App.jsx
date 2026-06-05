@@ -1021,26 +1021,17 @@ useEffect(() => {
     <div className="app-container">
       {page === "tracker" ? (
         <>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 18,
-            }}
-          >
-            <h2 className="title" style={{ margin: 0 }}>
-              Summer Miles 2026
-            </h2>
+          <div className="page-header">
+            <h2 className="title page-title">Summer Miles 2026</h2>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setPage("recaps")}>
+            <div className="page-header-actions">
+              <button type="button" onClick={() => setPage("recaps")}>
                 📊 Weekly Recaps
               </button>
 
               <button
+                type="button"
                 onClick={() => setMonoGreen((v) => !v)}
-                style={{ minWidth: 150 }}
               >
                 {monoGreen ? "🟢 All Green" : "🎨 Normal Colors"}
               </button>
@@ -1065,7 +1056,7 @@ useEffect(() => {
           </div>
 
           {routeDistance && (
-            <p>
+            <p className="progress-text">
               {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles ({(progress * 100).toFixed(0)}%)
             </p>
           )}
@@ -1147,7 +1138,7 @@ useEffect(() => {
 
                   {filteredRuns.map((r) => (
                     <li key={r.id} className="run-item">
-                      <span>
+                      <span className="run-item-details">
                         <>
                           {r.local_time
                             ? `${r.date} ${r.local_time} (${getTimezoneAbbr(r.timezone)})`
@@ -1218,32 +1209,18 @@ useEffect(() => {
               )}
             </div>
           </div>
-          {/* Footer Banner */}
-            <div
-              style={{
-                marginTop: 40,
-                padding: "14px 20px",
-                borderTop: "1px solid rgba(255,255,255,0.15)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 10,
-                fontSize: 14,
-                opacity: 0.8,
-              }}
-            >
-              <div>
-                <strong>Summer Miles 2026</strong>
-                <span style={{ marginLeft: 8 }}>v1.2.3</span>
-              </div>
-
-              <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                <span>Developed by Andrii Vedmid</span>
-                <span>Map Data © Mapbox</span>
-                <span>Powered by Supabase</span>
-              </div>
+          <footer className="app-footer">
+            <div className="app-footer-brand">
+              <strong>Summer Miles 2026</strong>
+              <span className="app-footer-version">v1.2.3</span>
             </div>
+
+            <div className="app-footer-meta">
+              <span>Developed by Andrii Vedmid</span>
+              <span>Map Data © Mapbox</span>
+              <span>Powered by Supabase</span>
+            </div>
+          </footer>
         </>
       ) : (
         <WeeklyRecapsPage onBack={() => setPage("tracker")} />
