@@ -478,6 +478,62 @@ export default function RunningProgressTracker() {
     setLogSortDir(LOG_SORT_DEFAULT_DIR[sort] ?? "desc");
   };
 
+  const prediction = useMemo(() => {
+    if (!routeDistance || runs.length === 0) return null;
+
+    const sortedRuns = [...runs].sort(
+      (a, b) => getRunTimestamp(a) - getRunTimestamp(b)
+    );
+
+    const firstRunDate = new Date(sortedRuns[0].date);
+    const today = new Date();
+
+    const elapsedDays = Math.max(
+      1,
+      Math.ceil((today - firstRunDate) / (1000 * 60 * 60 * 24))
+    );
+
+    const avgMilesPerDay = totalMiles / elapsedDays;
+
+    if (avgMilesPerDay <= 0) return null;
+
+    const remainingMiles = routeDistance - totalMiles;
+
+    const daysToFinish = Math.max(
+      0,
+      remainingMiles / avgMilesPerDay
+    );
+
+    const projectedArrival = new Date();
+    projectedArrival.setDate(
+      projectedArrival.getDate() + Math.ceil(daysToFinish)
+    );
+
+    const aug31 = new Date("2026-08-31T23:59:59");
+
+    const arrivesBeforeDeadline =
+      projectedArrival <= aug31;
+
+    let projectedMilesByAug31 = null;
+
+    if (!arrivesBeforeDeadline) {
+      const daysUntilAug31 = Math.max(
+        0,
+        (aug31 - today) / (1000 * 60 * 60 * 24)
+      );
+
+      projectedMilesByAug31 =
+        totalMiles + avgMilesPerDay * daysUntilAug31;
+    }
+
+    return {
+      avgMilesPerDay,
+      projectedArrival,
+      arrivesBeforeDeadline,
+      projectedMilesByAug31,
+    };
+  }, [runs, totalMiles, routeDistance]);
+
   // Fetch runs + real-time subscription
   useEffect(() => {
     supabase
@@ -1181,6 +1237,47 @@ useEffect(() => {
               {totalMiles.toFixed(1)} / {routeDistance.toFixed(0)} miles ({(progress * 100).toFixed(0)}%)
             </p>
           )}
+          {prediction && (
+            <div className="prediction-box">
+              <p>
+                Current pace:{" "}
+                <strong>
+                  {prediction.avgMilesPerDay.toFixed(1)}
+                </strong>{" "}
+                eq mi/day
+              </p>
+
+              {prediction.arrivesBeforeDeadline ? (
+                <p>
+                  Predicted arrival:{" "}
+                  <strong>
+                    {prediction.projectedArrival.toLocaleDateString()}
+                  </strong>
+                </p>
+              ) : (
+                <p>
+                  Predicted arrival:{" "}
+                  <strong>
+                    {prediction.projectedArrival.toLocaleDateString()}
+                  </strong>
+                  <br />
+                  By August 31, projected distance:{" "}
+                  <strong>
+                    {prediction.projectedMilesByAug31.toFixed(0)}
+                  </strong>
+                  {" / "}
+                  {routeDistance.toFixed(0)} miles
+                  {" ("}
+                  {(
+                    (prediction.projectedMilesByAug31 /
+                      routeDistance) *
+                    100
+                  ).toFixed(0)}
+                  %)
+                </p>
+              )}
+            </div>
+          )}
 
           {mapError && <p className="error-text">Oops something went wrong! Refresh the page and if the problem persists, contact Andrii.</p>}
 
@@ -1333,7 +1430,7 @@ useEffect(() => {
           <footer className="app-footer">
             <div className="app-footer-brand">
               <strong>Summer Miles 2026</strong>
-              <span className="app-footer-version">v1.2.3</span>
+              <span className="app-footer-version">v1.3</span>
             </div>
 
             <div className="app-footer-meta">
