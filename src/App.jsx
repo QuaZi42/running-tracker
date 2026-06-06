@@ -105,7 +105,7 @@ const RUNNERS = {
   },
   cedric: {
     displayName: "Cedric",
-    color:  "#0000ee",
+    color:  "#ee00ee",
     image:
       "https://i.postimg.cc/kMsw-FwFV/image.png",
   },
