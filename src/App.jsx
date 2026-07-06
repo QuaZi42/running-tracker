@@ -412,7 +412,8 @@ export default function RunningProgressTracker() {
   const [logNameFilter, setLogNameFilter] = useState("");
   const [logSort, setLogSort] = useState("datetime");
   const [logSortDir, setLogSortDir] = useState("desc");
-
+  
+  const [showPlaceFinder, setShowPlaceFinder] = useState(false);
   const [searchPlace, setSearchPlace] = useState("");
   const [searchResult, setSearchResult] = useState(null);
 
@@ -1536,6 +1537,42 @@ useEffect(() => {
                 </div>
               )}
             </div>
+              
+            <div style={{ marginTop: 3 }}>
+              <button
+                onClick={() => setShowPlaceFinder(!showPlaceFinder)}
+                className="toggle-btn"
+              >
+                {showPlaceFinder ? "▼" : "▶"} Place Finder
+              </button>
+
+              {showPlaceFinder && (
+                <div className="controls">
+                  <input
+                    placeholder="Search city..."
+                    value={searchPlace}
+                    onChange={(e) => setSearchPlace(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") findPlace();
+                    }}
+                  />
+                  <button onClick={findPlace}>Find</button>
+
+                  {searchResult && (
+                    <p className="progress-text">
+                      <strong>{searchResult.name}</strong>
+                      <br />
+                      {searchResult.miles.toFixed(0)} miles from the start.
+                      <br />
+                      {totalMiles >= searchResult.miles
+                        ? "✅ Already passed!"
+                        : `${(searchResult.miles - totalMiles).toFixed(1)} miles remaining`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
           </div>
           <footer className="app-footer">
             <div className="app-footer-brand">
