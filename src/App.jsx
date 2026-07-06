@@ -369,6 +369,15 @@ function appendRunnerSegment(segments, newCoords) {
   segments.push(newCoords);
 }
 
+function getDateInputBounds() {
+  const today = new Date();
+  const maxDate = today.toISOString().split("T")[0];
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const minDate = yesterday.toISOString().split("T")[0];
+  return { minDate, maxDate };
+}
+
 function SegmentedControl({
   value,
   onChange,
@@ -494,6 +503,8 @@ export default function RunningProgressTracker() {
     setLogSort(sort);
     setLogSortDir(LOG_SORT_DEFAULT_DIR[sort] ?? "desc");
   };
+
+  const { minDate, maxDate } = getDateInputBounds();
 
   const prediction = useMemo(() => {
     if (!routeDistance || runs.length === 0) return null;
@@ -1303,27 +1314,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* <div className="controls">
-            <input
-              placeholder="Search city..."
-              value={searchPlace}
-              onChange={(e) => setSearchPlace(e.target.value)}
-            />
-            <button onClick={findPlace}>Find</button>
-          </div>
-
-          {searchResult && (
-            <p className="progress-text">
-              {searchResult.name} is approximately{" "}
-              <strong>{searchResult.miles.toFixed(0)} miles</strong>
-              {" "}from the start.
-              {totalMiles >= searchResult.miles
-                ? " ✅ Already passed!"
-                : ` (${(searchResult.miles - totalMiles).toFixed(1)} miles remaining)`}
-            </p>
-          )} */}
-
-
           <div className="controls">
             <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
             <input placeholder="Miles" type="number" value={miles} onChange={(e) => setMiles(e.target.value)} />
@@ -1337,7 +1327,13 @@ useEffect(() => {
               ]}
             />
             <div className="controls-datetime">
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <input
+                type="date"
+                value={date}
+                min={minDate}
+                max={maxDate}
+                onChange={(e) => setDate(e.target.value)}
+              />
               <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </div>
             <button onClick={addRun} disabled={!routeDistance}>Add</button>
@@ -1577,7 +1573,7 @@ useEffect(() => {
           <footer className="app-footer">
             <div className="app-footer-brand">
               <strong>Summer Miles 2026</strong>
-              <span className="app-footer-version">v1.4</span>
+              <span className="app-footer-version">v1.5</span>
             </div>
 
             <div className="app-footer-meta">
