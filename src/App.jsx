@@ -157,6 +157,12 @@ const RUNNERS = {
     image:
       "https://i.postimg.cc/kGbY80yB/image.png",
   },
+  john: {
+    displayName: "John",
+    color:  "#c329e5",
+    image:
+      "https://i.postimg.cc/FK6gMd1D/image.png",
+  },
 };
 
 
@@ -194,6 +200,13 @@ const milestones = [
     miles: 628.1,
     image:
       "https://i.postimg.cc/KjNnHbRN/image.png",
+  },
+
+  {
+    name: "Gary, IN",
+    miles: 951,
+    image:
+      "https://i.postimg.cc/KjW5219g/Whats-App-Image-2026-06-28-at-22-12-50.jpg",
   },
   
   {
@@ -275,7 +288,7 @@ const milestones = [
   },
 
   {
-    name: "Ryan Zhao Memorial, CA",
+    name: "Ryan Zhao House, CA",
     miles: 3095.47,
     image:
       "https://i.postimg.cc/MTYDhVLq/image.png",
@@ -399,6 +412,9 @@ export default function RunningProgressTracker() {
   const [logNameFilter, setLogNameFilter] = useState("");
   const [logSort, setLogSort] = useState("datetime");
   const [logSortDir, setLogSortDir] = useState("desc");
+
+  const [searchPlace, setSearchPlace] = useState("");
+  const [searchResult, setSearchResult] = useState(null);
 
   const [postcards, setPostcards] = useState([]);
   const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
@@ -964,13 +980,16 @@ useEffect(() => {
           batchSeen.add(city.name);
           processedMilestonesRef.current.add(city.name);
 
-          const postcardImg = await generatePostcard(city, run.name);
+          const postcardRunner =
+            city.name === "Gary, IN" ? "Sebastian" : run.name;
+
+          const postcardImg = await generatePostcard(city, postcardRunner);
           
           if (postcardImg) {
             newPostcards.push({
               city: city.name,
               miles: city.miles,
-              runner: run.name,
+              runner: postcardRunner,
               image: postcardImg,
               createdAt: Date.now(),
             });
@@ -1067,6 +1086,74 @@ useEffect(() => {
       console.error("Failed to delete run:", error);
     }
   };
+
+  async function findPlace() {
+    if (!searchPlace.trim() || !route || !routeDistance) return;
+
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+        searchPlace
+      )}.json?limit=1&access_token=${token}`
+    );
+
+    const data = await res.json();
+
+    if (!data.features?.length) {
+      alert("Place not found.");
+      return;
+    }
+
+    const point = data.features[0].center;
+
+    // Find nearest point on the route
+    let bestIndex = 0;
+    let bestDist = Infinity;
+
+    for (let i = 0; i < route.length; i++) {
+      const dx = route[i][0] - point[0];
+      const dy = route[i][1] - point[1];
+      const d = dx * dx + dy * dy;
+
+      if (d < bestDist) {
+        bestDist = d;
+        bestIndex = i;
+      }
+    }
+
+    // Measure miles along route to that point
+    let miles = 0;
+
+    for (let i = 1; i <= bestIndex; i++) {
+      const [lng1, lat1] = route[i - 1];
+      const [lng2, lat2] = route[i];
+
+      const dlng = (lng2 - lng1) * Math.cos((lat1 * Math.PI) / 180);
+      const dlat = lat2 - lat1;
+
+      miles += Math.sqrt(dlng * dlng + dlat * dlat) * 69.11;
+    }
+
+    setSearchResult({
+      name: data.features[0].place_name,
+      miles,
+      coords: point,
+    });
+
+    if (mapRef.current) {
+      if (window.searchMarker) window.searchMarker.remove();
+
+      window.searchMarker = new mapboxgl.Marker({ color: "#0066ff" })
+        .setLngLat(point)
+        .addTo(mapRef.current);
+
+      mapRef.current.flyTo({
+        center: point,
+        zoom: 6,
+      });
+    }
+  }
 
   async function generatePostcard(city, runnerName) {
     const runner = RUNNERS[runnerName.toLowerCase().trim()];
@@ -1200,9 +1287,11 @@ useEffect(() => {
             <h2 className="title page-title">Summer Miles 2026</h2>
 
             <div className="page-header-actions">
+              {/*
               <button type="button" onClick={() => setPage("recaps")}>
                 📊 Weekly Recaps
               </button>
+              */}
 
               <button
                 type="button"
@@ -1212,6 +1301,27 @@ useEffect(() => {
               </button>
             </div>
           </div>
+
+          {/* <div className="controls">
+            <input
+              placeholder="Search city..."
+              value={searchPlace}
+              onChange={(e) => setSearchPlace(e.target.value)}
+            />
+            <button onClick={findPlace}>Find</button>
+          </div>
+
+          {searchResult && (
+            <p className="progress-text">
+              {searchResult.name} is approximately{" "}
+              <strong>{searchResult.miles.toFixed(0)} miles</strong>
+              {" "}from the start.
+              {totalMiles >= searchResult.miles
+                ? " ✅ Already passed!"
+                : ` (${(searchResult.miles - totalMiles).toFixed(1)} miles remaining)`}
+            </p>
+          )} */}
+
 
           <div className="controls">
             <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
