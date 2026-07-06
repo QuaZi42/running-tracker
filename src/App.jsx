@@ -1540,7 +1540,7 @@ useEffect(() => {
           <footer className="app-footer">
             <div className="app-footer-brand">
               <strong>Summer Miles 2026</strong>
-              <span className="app-footer-version">v1.3</span>
+              <span className="app-footer-version">v1.4</span>
             </div>
 
             <div className="app-footer-meta">
