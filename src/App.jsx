@@ -1135,7 +1135,7 @@ useEffect(() => {
     }
 
     // Measure miles along route to that point
-    let miles = 0;
+    let miles = 0.0;
 
     for (let i = 1; i <= bestIndex; i++) {
       const [lng1, lat1] = route[i - 1];
@@ -1558,7 +1558,7 @@ useEffect(() => {
                     <p className="progress-text">
                       <strong>{searchResult.name}</strong>
                       <br />
-                      {searchResult.miles.toFixed(0)} miles from the start.
+                      {searchResult.miles.toFixed(1)} miles from the start.
                       <br />
                       {totalMiles >= searchResult.miles
                         ? "✅ Already passed!"
