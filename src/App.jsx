@@ -1671,7 +1671,7 @@ export default function RunningProgressTracker() {
           <footer className="app-footer">
             <div className="app-footer-brand">
               <strong>Summer Miles 2026</strong>
-              <span className="app-footer-version">v1.6</span>
+              <span className="app-footer-version">v1.5.1</span>
             </div>
 
             <div className="app-footer-meta">
