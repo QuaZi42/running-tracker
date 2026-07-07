@@ -296,6 +296,101 @@ const milestones = [
 ];
 
 const imageCache = {};
+const imageLoadPromises = {};
+const postcardCache = {};
+const POSTCARDS_STORAGE_KEY = "summer-miles-2026-postcards";
+
+function loadStoredPostcards() {
+  try {
+    const raw = localStorage.getItem(POSTCARDS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredPostcards(postcards) {
+  try {
+    localStorage.setItem(POSTCARDS_STORAGE_KEY, JSON.stringify(postcards));
+  } catch (err) {
+    console.warn("Could not persist postcards:", err);
+  }
+}
+
+function computeMilestonesToGenerate(runs, existingCities) {
+  let currentTotal = 0;
+  const pending = [];
+
+  for (const run of runs) {
+    currentTotal += getEquivalentMiles(run);
+
+    for (const city of milestones) {
+      if (
+        currentTotal >= city.miles &&
+        !existingCities.has(city.name) &&
+        !pending.some((item) => item.city.name === city.name)
+      ) {
+        pending.push({
+          city,
+          runner: city.name === "Gary, IN" ? "Sebastian" : run.name,
+          date: run.date,
+        });
+      }
+    }
+  }
+
+  return pending;
+}
+
+async function loadImage(url, timeoutMs = 12000) {
+  if (imageCache[url]) return imageCache[url];
+  if (imageLoadPromises[url]) return imageLoadPromises[url];
+
+  imageLoadPromises[url] = new Promise((resolve, reject) => {
+    const img = new Image();
+    let settled = false;
+
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(value);
+    };
+
+    const timer = setTimeout(() => {
+      finish(reject, new Error(`Timed out loading image: ${url}`));
+    }, timeoutMs);
+
+    img.onload = () => {
+      imageCache[url] = img;
+      finish(resolve, img);
+    };
+
+    img.onerror = () => {
+      finish(reject, new Error(`Failed to load image: ${url}`));
+    };
+
+    img.crossOrigin = "anonymous";
+    img.src = url;
+  }).finally(() => {
+    delete imageLoadPromises[url];
+  });
+
+  return imageLoadPromises[url];
+}
+
+function preloadPostcardImages() {
+  const urls = new Set([
+    ...milestones.map((city) => city.image),
+    ...Object.values(RUNNERS).map((runner) => runner.image),
+  ]);
+
+  urls.forEach((url) => {
+    loadImage(url).catch(() => {});
+  });
+}
 
 function getEquivalentMiles(run) {
   return run.workout_type === "bike"
@@ -329,25 +424,6 @@ const LOG_SORT_DEFAULT_DIR = {
   equivalent: "desc",
   timeofday: "asc",
 };
-
-async function loadImage(url) {
-  if (imageCache[url]) return imageCache[url];
-
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-
-    img.crossOrigin = "anonymous";
-
-    img.onload = () => {
-      imageCache[url] = img;
-      resolve(img);
-    };
-
-    img.onerror = reject;
-
-    img.src = url;
-  });
-}
 
 function coordsEqual(a, b, eps = 1e-8) {
   return Math.abs(a[0] - b[0]) < eps && Math.abs(a[1] - b[1]) < eps;
@@ -426,8 +502,8 @@ export default function RunningProgressTracker() {
   const [searchPlace, setSearchPlace] = useState("");
   const [searchResult, setSearchResult] = useState(null);
 
-  const [postcards, setPostcards] = useState([]);
-  const [generatedPostcards, setGeneratedPostcards] = useState(new Set());
+  const [postcards, setPostcards] = useState(() => loadStoredPostcards());
+  const [postcardsLoading, setPostcardsLoading] = useState(false);
   const [monoGreen, setMonoGreen] = useState(true);
 
   const [showLog, setShowLog] = useState(false);
@@ -447,7 +523,14 @@ export default function RunningProgressTracker() {
   const [mapError, setMapError] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   
-  const generatingRef = useRef(new Set());
+  const processedMilestonesRef = useRef(
+    new Set(loadStoredPostcards().map((postcard) => postcard.city))
+  );
+  const postcardGenerationRef = useRef(0);
+
+  useEffect(() => {
+    preloadPostcardImages();
+  }, []);
 
   const totalMiles = useMemo(
     () =>
@@ -968,67 +1051,70 @@ export default function RunningProgressTracker() {
   }
 }, [runs, route, routeDistance, monoGreen]);
   // Milestone postcards
-// Keep this ref at the top level of your component
-const processedMilestonesRef = useRef(new Set());
+  useEffect(() => {
+    if (runs.length === 0) return;
 
-useEffect(() => {
-  async function checkMilestones() {
-    const newPostcards = [];
-    let currentTotal = 0;
+    const generationId = ++postcardGenerationRef.current;
 
-    // Use a local set for this specific execution to prevent internal duplicates
-    const batchSeen = new Set();
+    async function checkMilestones() {
+      const existingCities = new Set([
+        ...postcards.map((postcard) => postcard.city),
+        ...processedMilestonesRef.current,
+      ]);
 
-    for (const run of runs) {
-      currentTotal += getEquivalentMiles(run);
+      const pending = computeMilestonesToGenerate(runs, existingCities);
+      if (pending.length === 0) return;
 
-      for (const city of milestones) {
-        const crossed = currentTotal >= city.miles;
-        
-        // Check BOTH the global ref and the local batch set
-        if (crossed && !processedMilestonesRef.current.has(city.name) && !batchSeen.has(city.name)) {
-          
-          // LOCK it immediately before starting the async canvas work
-          batchSeen.add(city.name);
-          processedMilestonesRef.current.add(city.name);
+      setPostcardsLoading(true);
 
-          const postcardRunner =
-            city.name === "Gary, IN" ? "Sebastian" : run.name;
+      const results = await Promise.all(
+        pending.map(async (item) => {
+          const image = await generatePostcard(item.city, item.runner, item.date);
+          return image ? { ...item, image } : null;
+        })
+      );
 
-          const postcardImg = await generatePostcard(city, postcardRunner);
-          
-          if (postcardImg) {
-            newPostcards.push({
-              city: city.name,
-              miles: city.miles,
-              runner: postcardRunner,
-              image: postcardImg,
-              createdAt: Date.now(),
-            });
-          }
-        }
+      if (generationId !== postcardGenerationRef.current) return;
+
+      const generated = results.filter(Boolean);
+      if (generated.length === 0) {
+        setPostcardsLoading(false);
+        return;
       }
-    }
 
-    if (newPostcards.length > 0) {
+      generated.forEach((item) => {
+        processedMilestonesRef.current.add(item.city.name);
+      });
+
       setPostcards((prev) => {
-        // Create a map of existing postcards indexed by city name
-        const combined = [...newPostcards, ...prev];
-        const uniqueMap = new Map();
-        
-        // Only keep the first instance of any city found
-        combined.forEach(p => {
-          if (!uniqueMap.has(p.city)) {
-            uniqueMap.set(p.city, p);
-          }
+        const uniqueMap = new Map(prev.map((postcard) => [postcard.city, postcard]));
+
+        generated.forEach((item) => {
+          uniqueMap.set(item.city.name, {
+            city: item.city.name,
+            miles: item.city.miles,
+            runner: item.runner,
+            image: item.image,
+            createdAt: Date.now(),
+          });
         });
 
-        return Array.from(uniqueMap.values()).sort((a, b) => b.miles - a.miles);
+        const next = Array.from(uniqueMap.values()).sort(
+          (a, b) => b.miles - a.miles
+        );
+        saveStoredPostcards(next);
+        return next;
       });
-    }
-  }
 
-  checkMilestones();
+      setPostcardsLoading(false);
+    }
+
+    checkMilestones().catch((err) => {
+      console.error("Postcard generation failed:", err);
+      if (generationId === postcardGenerationRef.current) {
+        setPostcardsLoading(false);
+      }
+    });
   }, [runs]);
 
   const getUserTimezone = () => {
@@ -1091,7 +1177,9 @@ useEffect(() => {
     if (!error) {
       // 1. Clear the "already processed" memory
       processedMilestonesRef.current.clear();
-      // 2. Wipe the postcards so they are re-generated based on remaining runs
+      postcardGenerationRef.current += 1;
+      Object.keys(postcardCache).forEach((key) => delete postcardCache[key]);
+      localStorage.removeItem(POSTCARDS_STORAGE_KEY);
       setPostcards([]);
       setPendingDelete(null);
     } else {
@@ -1135,7 +1223,7 @@ useEffect(() => {
     }
 
     // Measure miles along route to that point
-    let miles = 0.0;
+    let miles = 0;
 
     for (let i = 1; i <= bestIndex; i++) {
       const [lng1, lat1] = route[i - 1];
@@ -1167,7 +1255,9 @@ useEffect(() => {
     }
   }
 
-  async function generatePostcard(city, runnerName) {
+  async function generatePostcard(city, runnerName, runDate) {
+    if (postcardCache[city.name]) return postcardCache[city.name];
+
     const runner = RUNNERS[runnerName.toLowerCase().trim()];
 
     if (!runner) {
@@ -1185,8 +1275,6 @@ useEffect(() => {
 
       const bg = await loadImage(city.image);
       const runnerImg = await loadImage(runner.image);
-
-      // BACKGROUND
       ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
       // WARM POSTCARD TONE
@@ -1241,7 +1329,9 @@ useEffect(() => {
       ctx.font = "28px sans-serif";
 
       ctx.fillText(
-        new Date().toLocaleDateString(),
+        runDate
+          ? new Date(`${runDate}T12:00:00`).toLocaleDateString()
+          : new Date().toLocaleDateString(),
         70,
         220
       );
@@ -1273,7 +1363,9 @@ useEffect(() => {
         canvas.height - 60
       );
 
-      return canvas.toDataURL("image/png");
+      const dataUrl = canvas.toDataURL("image/png");
+      postcardCache[city.name] = dataUrl;
+      return dataUrl;
     } catch (err) {
       console.error("Failed to generate postcard:", err);
       return null;
@@ -1505,15 +1597,21 @@ useEffect(() => {
             </div>
 
             <div style={{ marginTop: 3 }}>
-              {postcards.length > 0 && (
+              {(postcards.length > 0 || postcardsLoading) && (
                 <button onClick={() => setShowPostcards(!showPostcards)} className="toggle-btn">
                   {showPostcards ? "▼" : "▶"} Postcards
+                  {postcardsLoading ? " (generating…)" : ""}
                 </button>
               )}
 
               {showPostcards && (
                 <div>
-                  {postcards.length === 0 && <p>No cities reached yet.</p>}
+                  {postcardsLoading && postcards.length === 0 && (
+                    <p className="postcards-status">Generating postcards…</p>
+                  )}
+                  {!postcardsLoading && postcards.length === 0 && (
+                    <p>No cities reached yet.</p>
+                  )}
                   <div className="postcard-grid">
                     {postcards.map((p, index) => (
                       <div key={`${p.city}-${index}`} className="postcard-card">
@@ -1558,7 +1656,7 @@ useEffect(() => {
                     <p className="progress-text">
                       <strong>{searchResult.name}</strong>
                       <br />
-                      {searchResult.miles.toFixed(1)} miles from the start.
+                      {searchResult.miles.toFixed(0)} miles from the start.
                       <br />
                       {totalMiles >= searchResult.miles
                         ? "✅ Already passed!"
@@ -1573,7 +1671,7 @@ useEffect(() => {
           <footer className="app-footer">
             <div className="app-footer-brand">
               <strong>Summer Miles 2026</strong>
-              <span className="app-footer-version">v1.5</span>
+              <span className="app-footer-version">v1.6</span>
             </div>
 
             <div className="app-footer-meta">

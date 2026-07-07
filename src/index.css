@@ -359,6 +359,11 @@ a:hover {
   margin-bottom: 12px;
 }
 
+.postcards-status {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .download-link {
   color: var(--accent);
 }
